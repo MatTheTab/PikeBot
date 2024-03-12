@@ -3,6 +3,7 @@ import chess
 import chess.engine
 
 def evaluate_all_moves_simple_engine(board, engine, time_limit=0.1):
+    # NOTE: get scores from specified color pov, use multipv argument with length of legal moves?
     """
     Evaluate all legal moves on the given board using a simple chess engine. We iterate over every legal move using board.legal_moves
     and use the engine's evaluate function to obtain scores of each move.
@@ -157,6 +158,7 @@ def show_evaluated_moves(tree, board, depth=0):
         board.pop()
 
 class Player:
+    # NOTE: Move color to player?
     '''
     Player class, implements basic functionality necessary for every Bot to have.
     '''

@@ -2,7 +2,7 @@ import pytest
 from utils.chess_utils import *
 
 class TestChessPlaying:
-    stockfish_path = r"C:\Users\barte\Desktop\Studies\chess_bot\engine\stockfish\stockfish-windows-x86-64-avx2.exe"
+    stockfish_path = r"C:\Users\Bartek\Desktop\Studies\chessbot\stockfish\stockfish-windows-x86-64-avx2.exe"
     
     def setup_method(self, method):
         print(f"Setting up {method}")
