@@ -293,8 +293,6 @@ class OptimalStockFishAgent(Player):
         Returns:
         - chess.Move: The best move calculated by the engine.
         '''
-        
-        ## CHANGE ==========
         # Update opponents move in the engine's chessboard
         try:
             previous_move = board.peek()
@@ -304,7 +302,6 @@ class OptimalStockFishAgent(Player):
             return chess.Move.from_uci(self.engine.get_best_move())
 
         return chess.Move.from_uci(self.engine.get_best_move())
-        ## CHANGE ==========
     
     def play_move(self, move, board):
         # Move in the engine's chessboard
@@ -508,7 +505,7 @@ def mean_aggr(preds_scores):
     for move, next_move, choice_prob, score in preds_scores:
         move_stats[move] = move_stats.get(move, [0, 0])
         move_stats[move][0] += 1
-        if score is None or choice_prob is None: #CHECK: see if reasoning is correct, what edge cases are possible and if the function works correctly in general
+        if score is None or choice_prob is None:
             value = 0
         else:
             value = choice_prob * score
@@ -595,7 +592,7 @@ def max_aggr_debug(preds_scores):
     return best_move
 
 
-class ChessBot(Player): #CHECK: see if the idea is sensible
+class ChessBot(Player):
     '''
     ChessBot class, represents a chess-playing agent combining model-based and engine-based evaluation.
 
@@ -673,7 +670,7 @@ class ChessBot(Player): #CHECK: see if the idea is sensible
                 print("Board: ")
                 print(board)
                 info = self.engine.analyse(board, chess.engine.Limit(depth=self.engine_depth, time=self.time_limit))
-                score = info['score'].pov(color=self.color).score(mate_score=900) #CHECK: if score is correct for a given color and if mate_score is appropriate
+                score = info['score'].pov(color=self.color).score(mate_score=900)
                 board_state = self.model.encode(board)
                 choice_prob = self.model.predict(board_state)
                 print("Probability = ", choice_prob)
