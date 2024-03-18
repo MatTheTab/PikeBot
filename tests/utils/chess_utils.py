@@ -67,7 +67,7 @@ def evaluate_all_moves_stock_fish(board, engine):
     move_scores = {}
     for move in all_moves:
         board.push(move)
-        info = stockfish.get_evaluation()
+        info = engine.get_evaluation()
         move_scores[move] = info['value']
         board.pop()
     #engine.quit()
@@ -159,7 +159,7 @@ def evaluate_tree_stockfish(board, depth, engine):
     moves_tree = []
     for move in legal_moves:
         board.push(move)
-        info = stockfish.get_evaluation()
+        info = engine.get_evaluation()
         score = info['value']
         child_moves = evaluate_tree_stockfish(board, depth - 1, engine)
         board.pop()

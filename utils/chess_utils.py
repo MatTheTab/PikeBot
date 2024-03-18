@@ -1,6 +1,32 @@
 from stockfish import Stockfish
 import chess
 import chess.engine
+import random
+
+def get_random_chessboard(min_moves=20, max_moves=100):
+    """
+    Generate a chessboard at a position created after making between min_moves and max_moves random legal moves.
+
+    Parameters:
+    - min_moves (int, optional): minimum legal moves to be made.
+    - max_moves (int, optional): maximum legal moves to be made.
+
+    Returns:
+    - chess.Board: a chessboard at a random position
+    """
+    assert min_moves < max_moves, "min_moves should be lower than max_moves"
+
+    num_moves = random.randint(30, 80)
+    board = chess.Board()
+    for _ in range(num_moves):
+        legal_moves = list(board.legal_moves)
+        if not legal_moves:
+            break
+
+        random_move = random.choice(legal_moves)
+        board.push(random_move)
+    
+    return board
 
 def evaluate_all_moves_simple_engine(board, engine, time_limit=0.1):
     """
@@ -41,7 +67,7 @@ def evaluate_all_moves_stock_fish(board, engine):
     move_scores = {}
     for move in all_moves:
         board.push(move)
-        info = stockfish.get_evaluation()
+        info = engine.get_evaluation()
         move_scores[move] = info['value']
         board.pop()
     #engine.quit()
@@ -133,7 +159,7 @@ def evaluate_tree_stockfish(board, depth, engine):
     moves_tree = []
     for move in legal_moves:
         board.push(move)
-        info = stockfish.get_evaluation()
+        info = engine.get_evaluation()
         score = info['value']
         child_moves = evaluate_tree_stockfish(board, depth - 1, engine)
         board.pop()
@@ -204,16 +230,16 @@ class OptimalSimpleEngineAgent(Player):
     - get_best_move(self, board): Returns the best move calculated by the engine.
     - close(self): Closes the engine.
     '''
-    def __init__(self, stockfish_path, time_limit=0.1):
+    def __init__(self, stockfish_path, limits={"time": 0.1}):
         '''
         Initialize the OptimalSimpleEngineAgent object.
 
         Parameters:
         - stockfish_path (str): The path to the Stockfish executable.
-        - time_limit (float, optional): The time limit for move calculation in seconds. Defaults to 0.1.
+        - limits (dict, optional): The limits to be used in chess.engine.Limit. Defaults to 0.1 second time limit.
         '''
         self.engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
-        self.time_limit = time_limit
+        self.settings = limits
 
     def get_best_move(self, board):
         '''
@@ -225,7 +251,7 @@ class OptimalSimpleEngineAgent(Player):
         Returns:
         - chess.Move: The best move calculated by the engine.
         '''
-        result = self.engine.play(board, chess.engine.Limit(time=self.time_limit))
+        result = self.engine.play(board, chess.engine.Limit(**self.limits))
         return result.move
 
     def close(self):
@@ -240,13 +266,12 @@ class OptimalStockFishAgent(Player):
 
     Attributes:
     - engine (Stockfish): The Stockfish engine used by the agent.
-    - color (str): The color of the agent, either "white" or "black".
 
     Methods:
-    - __init__(self, stockfish_path, depth=8, settings={"Threads": 2, "Hash": 2048}, color="white"): Initializes the OptimalStockFishAgent object.
+    - __init__(self, stockfish_path, depth=8, settings={"Threads": 2, "Hash": 2048}): Initializes the OptimalStockFishAgent object.
     - get_best_move(self, board): Returns the best move calculated by the engine.
     '''
-    def __init__(self, stockfish_path, depth=8, settings = {"Threads": 2, "Hash": 2048}, color="white"):
+    def __init__(self, stockfish_path, depth=8, settings = {"Threads": 2, "Hash": 2048}):
         '''
         Initialize the OptimalStockFishAgent object.
 
@@ -254,13 +279,11 @@ class OptimalStockFishAgent(Player):
         - stockfish_path (str): The path to the Stockfish executable.
         - depth (int, optional): The search depth for Stockfish engine. Defaults to 8.
         - settings (dict, optional): Additional parameters for Stockfish engine. Defaults to {"Threads": 2, "Hash": 2048}.
-        - color (str, optional): The color of the agent, either "white" or "black". Defaults to "white".
-        '''
+       '''
         stockfish = Stockfish(path=stockfish_path, depth=depth, parameters=settings)
         self.engine = stockfish
-        self.color = color
 
-    def get_best_move(self, board): #CHECK: Check if the move value should be inverted for black, idk how it works in practice
+    def get_best_move(self, board):
         '''
         Get the best move calculated by the engine.
 
@@ -270,21 +293,22 @@ class OptimalStockFishAgent(Player):
         Returns:
         - chess.Move: The best move calculated by the engine.
         '''
-        all_moves = list(board.legal_moves)
-        move_scores = {}
-        if self.color == "black":
-            move_val = float('inf')
-        else:
-            move_val = float('-inf')
-        top_move = "None"
-        for move in all_moves:
-            board.push(move)
-            info = self.engine.get_evaluation()
-            if (self.color != "black" and info['value']>move_val) or (self.color == "black" and info['value']<move_val):
-                top_move = move
-                move_val = info["value"]
-            board.pop()
-        return top_move
+        # Update opponents move in the engine's chessboard
+        try:
+            previous_move = board.peek()
+            self.engine.make_moves_from_current_position([previous_move])
+        except IndexError:
+            # If first move continue
+            return chess.Move.from_uci(self.engine.get_best_move())
+
+        return chess.Move.from_uci(self.engine.get_best_move())
+    
+    def play_move(self, move, board):
+        # Move in the engine's chessboard
+        self.engine.make_moves_from_current_position([move])
+
+        board.push(move)
+
 
 class Human(Player):
     '''
@@ -339,7 +363,7 @@ def play_chess(white_player, black_player, mute=False):
             black_player.display_board(board)
 
         if board.is_game_over():
-            result = board.result() #CHECK: see if results are correctly generated and checked
+            result = board.result()
             if result == "1-0":
                 if not mute:
                     print("\nWhite Wins!\n")
@@ -352,8 +376,7 @@ def play_chess(white_player, black_player, mute=False):
                 if not mute:
                     print("\nIt's a tie!\n")
                 return 0
-            break
-
+            
         black_move = black_player.get_best_move(board)
         if not mute:
             print("\nBlack's Move:", black_move, "\n")
@@ -482,7 +505,7 @@ def mean_aggr(preds_scores):
     for move, next_move, choice_prob, score in preds_scores:
         move_stats[move] = move_stats.get(move, [0, 0])
         move_stats[move][0] += 1
-        if score is None or choice_prob is None: #CHECK: see if reasoning is correct, what edge cases are possible and if the function works correctly in general
+        if score is None or choice_prob is None:
             value = 0
         else:
             value = choice_prob * score
@@ -569,7 +592,7 @@ def max_aggr_debug(preds_scores):
     return best_move
 
 
-class ChessBot(Player): #CHECK: see if the idea is sensible
+class ChessBot(Player):
     '''
     ChessBot class, represents a chess-playing agent combining model-based and engine-based evaluation.
 
@@ -647,7 +670,7 @@ class ChessBot(Player): #CHECK: see if the idea is sensible
                 print("Board: ")
                 print(board)
                 info = self.engine.analyse(board, chess.engine.Limit(depth=self.engine_depth, time=self.time_limit))
-                score = info['score'].pov(color=self.color).score(mate_score=900) #CHECK: if score is correct for a given color and if mate_score is appropriate
+                score = info['score'].pov(color=self.color).score(mate_score=900)
                 board_state = self.model.encode(board)
                 choice_prob = self.model.predict(board_state)
                 print("Probability = ", choice_prob)
