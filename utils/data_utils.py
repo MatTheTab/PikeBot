@@ -261,25 +261,77 @@ def set_scores(board, engine, depths, time_limits, color, mate_score, data):
             score = info['score'].pov(color=color).score(mate_score=mate_score)
             data[f"stockfish_score_depth_{depth}"].append(score)
 
-def save_game_data(engine, depths, time_limits, df_filename, file_path, game_number, game, str_functions, board_functions, directory = "D:\\PikeBot\\New_Processed_Data"):
+def compress_file(filename):
     '''
-    Read and transform data from pgn game format to dataframe with appropriate information.
+    Compresses a file using gzip compression and removes the original file.
+
+    Parameters:
+    - filename (str): Path to the file to be compressed.
     '''
-    data = {"human": [],"player": [], "elo": [], "color": [], "event": [], "clock": [], "stockfish_score_depth_1": [], "stockfish_score_depth_2": [], "stockfish_score_depth_3": [], "stockfish_score_depth_4": [], "stockfish_score_depth_5": [], "stockfish_score_depth_8": [], "stockfish_score_depth_10": [], "stockfish_score_depth_12": [], "stockfish_score_depth_15": [], "stockfish_score_depth_16": [], "stockfish_score_depth_18": [], "stockfish_score_depth_20": [], "past_move_1": [], "past_move_2": [], "past_move_3": [], "past_move_4": [], "past_move_5": [], "past_move_6": [], "past_move_7": [], "past_move_8": [], "past_move_9": [],  "past_move_10": [], "past_move_11": [], "past_move_12": [], "current_move": []}
-    j=0
-    file_path_queue = deque(maxlen=12)
+    with open(filename, 'rb') as f_in:
+        with gzip.open(filename+".gz", 'wb') as f_out:
+            f_out.writelines(f_in)
+    os.remove(filename)
+
+def get_initial_filepaths(directory, game_number, df_filename, file_path, columns_data, j):
+    '''
+    Generates initial file paths and a file path queue.
+
+    Parameters:
+    - directory (str): Directory path.
+    - game_number (int): Number of the game.
+    - df_filename (str): Filename for the DataFrame.
+    - file_path (str): File path for the game data.
+    - columns_data (dict): Dictionary defining the columns of the DataFrame.
+    - j (int): Move number.
+
+    Returns:
+    - file_path_queue (deque): Queue containing file paths.
+    - filename (str): Path to the filename.
+    - empty_filename (str): Path to the empty filename.
+    - df_filepath (str): Path to the DataFrame file.
+    '''
+    file_path_queue = deque(maxlen=columns_data["num_past_moves"])
     filename = os.path.join(directory, f"{file_path}_game_{game_number}_move_{j}.npy")
     empty_filename = os.path.join(directory, f"{file_path}_game_{game_number}_move_empty.npy")
     df_filepath = os.path.join(directory, df_filename)
-    
-    for _ in range(12):
+    return file_path_queue, filename, empty_filename, df_filepath
+
+def get_initial_game_state(data, file_path_queue, game, engine, depths, time_limits, game_number, file_path, empty_filename, filename, str_functions, board_functions, columns_data, j):
+    '''
+    Initializes game state and saves initial board configurations.
+
+    Parameters:
+    - data (dict): Dictionary containing data.
+    - file_path_queue (deque): Queue containing file paths.
+    - game: Chess game object.
+    - engine (str): Engine used for playing the game.
+    - depths (int): Depth of the search for the engine.
+    - time_limits (dict): Time limits for the game.
+    - game_number (int): Number of the game.
+    - file_path (str): File path for the game data.
+    - empty_filename (str): Path to the empty filename.
+    - filename (str): Path to the filename.
+    - str_functions: A list of functions that convert string notation to bitboards.
+    - board_functions: A list of functions that generate bitboards from chess.Board objects.
+    - columns_data (dict): Dictionary defining the columns of the DataFrame.
+    - j (int): Move number.
+
+    Returns:
+    - data (dict): Updated dictionary containing data.
+    - board: Chess board object.
+    - white_player (str): Name of the white player.
+    - white_elo (str): Elo rating of the white player.
+    - black_player (str): Name of the black player.
+    - black_elo (str): Elo rating of the black player.
+    - file_path_queue (deque): Updated queue containing file paths.
+    '''
+    for _ in range(columns_data["num_past_moves"]):
         file_path_queue.append(f"{file_path}_game_{game_number}_move_empty.npy.gz")     
-    
     white_player = game.headers["White"]
     black_player = game.headers["Black"]
     white_elo = game.headers["WhiteElo"]
     black_elo = game.headers["BlackElo"]
-    
     board = game.board()
     set_scores(board, engine, depths, time_limits, color=chess.WHITE, mate_score=900, data=data)
     str_board = board.fen()
@@ -287,17 +339,8 @@ def save_game_data(engine, depths, time_limits, df_filename, file_path, game_num
     empty_board = np.zeros_like(new_board)
     np.save(empty_filename, empty_board)
     np.save(filename, new_board)
-
-    with open(empty_filename, 'rb') as f_in:
-        with gzip.open(empty_filename+".gz", 'wb') as f_out:
-            f_out.writelines(f_in)
-    os.remove(empty_filename)
-
-    with open(filename, 'rb') as f_in:
-        with gzip.open(filename+".gz", 'wb') as f_out:
-            f_out.writelines(f_in)
-    os.remove(filename)
-
+    compress_file(empty_filename)
+    compress_file(filename)
     data["current_move"].append(f"{file_path}_game_{game_number}_move_{j}.npy.gz")
     data["event"].append(game.headers["Event"])
     for node in game.mainline():
@@ -308,83 +351,165 @@ def save_game_data(engine, depths, time_limits, df_filename, file_path, game_num
     data["color"].append("Starting Move")
     data["elo"].append(white_elo)
     data["human"].append(True)
-
     x=1
     for temp_path in file_path_queue:
         data[f"past_move_{x}"].append(temp_path)
         x+=1
     file_path_queue.append(filename+".gz")
-    
+    return data, board, white_player, white_elo, black_player, black_elo, file_path_queue
+
+def get_save_random_move(board, node, game_number, directory, str_functions, board_functions, file_path, j, file_path_queue, data, player_color, engine, depths, time_limits, game, white_elo, black_elo):
+    '''
+    Performs and saves a random move made by the bot.
+
+    Parameters:
+    - board: Chess board object.
+    - node: Chess node object.
+    - game_number (int): Number of the game.
+    - directory (str): Directory path.
+    - str_functions: A list of functions that convert string notation to bitboards.
+    - board_functions: A list of functions that generate bitboards from chess.Board objects.
+    - file_path (str): File path for the game data.
+    - j (int): Move number.
+    - file_path_queue (deque): Queue containing file paths.
+    - data (dict): Dictionary containing data.
+    - player_color: Color of the player.
+    - engine (str): Engine used for playing the game.
+    - depths (int): Depth of the search for the engine.
+    - time_limits (dict): Time limits for the game.
+    - game: Chess game object.
+    - white_elo (str): Elo rating of the white player.
+    - black_elo (str): Elo rating of the black player.
+
+    Returns:
+    - data (dict): Updated dictionary containing data.
+    - file_path_queue (deque): Updated queue containing file paths.
+    - board: Updated chess board object.
+    '''
+    legal_moves = list(board.legal_moves)
+    bot_move = random.choice(legal_moves)
+    bot_clock = node.clock()
+    board.push(bot_move)
+    bot_str_board = board.fen()
+    x=1
+    for temp_path in file_path_queue:
+        data[f"past_move_{x}"].append(temp_path)
+        x+=1
+    bot_new_board = get_bitboards(bot_str_board, board, str_functions, board_functions)
+    bot_filename = os.path.join(directory, f"bot_{file_path}_game_{game_number}_move_{j}.npy")
+    np.save(bot_filename, bot_new_board)
+    compress_file(bot_filename)
+    data["current_move"].append(f"bot_{file_path}_game_{game_number}_move_{j}.npy.gz")
+
+    data["human"].append(False)
+    data["event"].append(game.headers["Event"])
+    data["clock"].append(bot_clock)
+    if player_color == chess.WHITE:
+        data["player"].append("bot")
+        data["color"].append("White")
+        data["elo"].append(white_elo)
+        set_scores(board, engine, depths, time_limits, color=chess.WHITE, mate_score=900, data=data)
+    else:
+        data["player"].append("bot")
+        data["color"].append("Black")
+        data["elo"].append(black_elo)
+        set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data)
+    board.pop()
+    return data, file_path_queue, board 
+
+def get_save_human_move(board, node, game_number, directory, str_functions, board_functions, file_path, j, file_path_queue, data, player_color, engine, depths, time_limits, game, white_player, white_elo, black_player, black_elo):
+    '''
+    Performs and saves a human move.
+
+    Parameters:
+    - board: Chess board object.
+    - node: Chess node object.
+    - game_number (int): Number of the game.
+    - directory (str): Directory path.
+    - str_functions: A list of functions that convert string notation to bitboards.
+    - board_functions: A list of functions that generate bitboards from chess.Board objects.
+    - file_path (str): File path for the game data.
+    - j (int): Move number.
+    - file_path_queue (deque): Queue containing file paths.
+    - data (dict): Dictionary containing data.
+    - player_color: Color of the player.
+    - engine (str): Engine used for playing the game.
+    - depths (int): Depth of the search for the engine.
+    - time_limits (dict): Time limits for the game.
+    - game: Chess game object.
+    - white_player (str): Name of the white player.
+    - white_elo (str): Elo rating of the white player.
+    - black_player (str): Name of the black player.
+    - black_elo (str): Elo rating of the black player.
+
+    Returns:
+    - data (dict): Updated dictionary containing data.
+    - file_path_queue (deque): Updated queue containing file paths.
+    - filename (str): Path to the saved file.
+    - board: Updated chess board object.
+    '''
+    move = node.move
+    clock = node.clock()
+    board.push(move)
+    str_board = board.fen()
+    x=1
+    for temp_path in file_path_queue:
+        data[f"past_move_{x}"].append(temp_path)
+        x+=1
+    new_board = get_bitboards(str_board, board, str_functions, board_functions)
+    filename = os.path.join(directory, f"{file_path}_game_{game_number}_move_{j}.npy")
+    np.save(filename, new_board)
+    compress_file(filename)
+    data["current_move"].append(f"{file_path}_game_{game_number}_move_{j}.npy.gz")
+    file_path_queue.append(f"{file_path}_game_{game_number}_move_{j}.npy.gz")
+
+    data["human"].append(True)
+    data["event"].append(game.headers["Event"])
+    data["clock"].append(clock)
+    if player_color == chess.WHITE:
+        data["player"].append(white_player)
+        data["color"].append("White")
+        data["elo"].append(white_elo)
+        set_scores(board, engine, depths, time_limits, color=chess.WHITE, mate_score=900, data=data)
+    else:
+        data["player"].append(black_player)
+        data["color"].append("Black")
+        data["elo"].append(black_elo)
+        set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data)
+    return data, file_path_queue, filename, board
+
+def save_game_data(engine, depths, time_limits, df_filename, file_path, game_number, game, str_functions, board_functions,
+                    directory = "D:\\PikeBot\\New_Processed_Data", columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True}):
+    '''
+    Read and transform data from PGN game format to a DataFrame with appropriate information, and save it to a compressed CSV file.
+
+    Parameters:
+    - engine (str): Stockfish engine used for evaluating moves.
+    - depths (list): Depths of the search for the engine.
+    - time_limits (list): Time limits for the search.
+    - df_filename (str): Filename for the DataFrame.
+    - file_path (str): File path for the game data.
+    - game_number (int): Number of the game.
+    - game: The chess game object.
+    - str_functions: A list of functions that convert string notation to bitboards.
+    - board_functions: A list of functions that generate bitboards from chess.Board objects.
+    - directory (str, optional): Directory path where the data will be saved. Defaults to "D:\\PikeBot\\New_Processed_Data".
+    - columns_data (dict, optional): Dictionary defining the columns of the DataFrame. Defaults to {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True}.
+    '''
+
+    data = {}
+    data = initialize_data(data, depths, columns_data)
+    j=0
+    file_path_queue, filename, empty_filename, df_filepath = get_initial_filepaths(directory, game_number, df_filename, file_path, columns_data, j)
+    data, board, white_player, white_elo, black_player, black_elo, file_path_queue = get_initial_game_state(data, file_path_queue, game, engine,
+                                                                                                             depths, time_limits, game_number,
+                                                                                                               file_path, empty_filename, filename,
+                                                                                                                 str_functions, board_functions, columns_data, j)
     for node in game.mainline():
         j+=1
         player_color = board.turn
-        #random move
-        legal_moves = list(board.legal_moves)
-        bot_move = random.choice(legal_moves)
-        bot_clock = node.clock()
-        board.push(bot_move)
-        bot_str_board = board.fen()
-        x=1
-        for temp_path in file_path_queue:
-            data[f"past_move_{x}"].append(temp_path)
-            x+=1
-        bot_new_board = get_bitboards(bot_str_board, board, str_functions, board_functions)
-        bot_filename = os.path.join(directory, f"bot_{file_path}_game_{game_number}_move_{j}.npy")
-        np.save(bot_filename, bot_new_board)
-        with open(bot_filename, 'rb') as f_in:
-            with gzip.open(bot_filename+".gz", 'wb') as f_out:
-                f_out.writelines(f_in)  
-        os.remove(bot_filename)
-        data["current_move"].append(f"bot_{file_path}_game_{game_number}_move_{j}.npy.gz")
-
-        data["human"].append(False)
-        data["event"].append(game.headers["Event"])
-        data["clock"].append(bot_clock)
-        if player_color == chess.WHITE:
-            data["player"].append("bot")
-            data["color"].append("White")
-            data["elo"].append(white_elo)
-            set_scores(board, engine, depths, time_limits, color=chess.WHITE, mate_score=900, data=data)
-        else:
-            data["player"].append("bot")
-            data["color"].append("Black")
-            data["elo"].append(black_elo)
-            set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data)
-        board.pop()
-
-        #human move
-        move = node.move
-        clock = node.clock()
-        board.push(move)
-        str_board = board.fen()
-        x=1
-        for temp_path in file_path_queue:
-            data[f"past_move_{x}"].append(temp_path)
-            x+=1
-        new_board = get_bitboards(str_board, board, str_functions, board_functions)
-        filename = os.path.join(directory, f"{file_path}_game_{game_number}_move_{j}.npy")
-        np.save(filename, new_board)
-        with open(filename, 'rb') as f_in:
-            with gzip.open(filename+".gz", 'wb') as f_out:
-                f_out.writelines(f_in)
-        os.remove(filename)  
-        data["current_move"].append(f"{file_path}_game_{game_number}_move_{j}.npy.gz")
-        file_path_queue.append(f"{file_path}_game_{game_number}_move_{j}.npy.gz") #Do not add this to random moves!
-
-        data["human"].append(True)
-        data["event"].append(game.headers["Event"])
-        data["clock"].append(clock)
-        if player_color == chess.WHITE:
-            data["player"].append(white_player)
-            data["color"].append("White")
-            data["elo"].append(white_elo)
-            set_scores(board, engine, depths, time_limits, color=chess.WHITE, mate_score=900, data=data)
-        else:
-            data["player"].append(black_player)
-            data["color"].append("Black")
-            data["elo"].append(black_elo)
-            set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data)
-
+        data, file_path_queue, board = get_save_random_move(board, node, game_number, directory, str_functions, board_functions, file_path, j, file_path_queue, data, player_color, engine, depths, time_limits, game, white_elo, black_elo)
+        data, file_path_queue, filename, board = get_save_human_move(board, node, game_number, directory, str_functions, board_functions, file_path, j, file_path_queue, data, player_color, engine, depths, time_limits, game, white_player, white_elo, black_player, black_elo)
     df = pd.DataFrame(data)
     df.to_csv(df_filepath, index=False, compression='gzip')
 
@@ -392,7 +517,8 @@ def save_game_data(engine, depths, time_limits, df_filename, file_path, game_num
 
 def save_data(txt_file_dir, txt_file_name, directory_path, file_name, verbose = True, str_functions = [str_to_board_all_figures_colors], board_functions = [get_all_attacks], 
               stockfish_path = "D:\PikeBot\stockfish\stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], 
-              time_limits = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01], max_num_games = np.inf): #Double check time limits later
+              time_limits = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01], max_num_games = np.inf,
+              columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True}): #Double check time limits later
     '''
     Saves data extracted from PGN games into CSV files. Uses .gz compression to minimize file size.
     
@@ -402,8 +528,8 @@ def save_data(txt_file_dir, txt_file_name, directory_path, file_name, verbose = 
     - directory_path (str): The directory path where PGN files are stored.
     - file_name (str): The name of the PGN file.
     - verbose (bool, optional): If True, prints the number of processed games in the file. Defaults to True.
-    - str_functions (list, optional): List of functions to convert board state to string representation. Defaults to [str_to_board_all_figures_colors].
-    - board_functions (list, optional): List of functions to apply on chess board. Defaults to [get_all_attacks].
+    - str_functions (list, optional): List of functions to convert board state to bitboard representation. Defaults to [str_to_board_all_figures_colors].
+    - board_functions (list, optional): List of functions to apply on chess board to convert to bitboard notation. Defaults to [get_all_attacks].
     - stockfish_path (str, optional): The path to the Stockfish chess engine executable. Defaults to "D:\PikeBot\stockfish\stockfish-windows-x86-64-avx2.exe".
     - depths (list, optional): List of depths for Stockfish engine analysis. Defaults to [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20].
     - time_limits (list, optional): List of time limits for Stockfish engine analysis. Defaults to [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]. Should be the same length as depths list.
@@ -429,7 +555,7 @@ def save_data(txt_file_dir, txt_file_name, directory_path, file_name, verbose = 
         mode = 'a' if os.path.exists(txt_file_path) else 'w'
         with open(txt_file_path, mode) as file:
           file.write(df_filename + '\n')
-        save_game_data(engine, depths, time_limits, df_filename, file_name, i, pgn_game, str_functions, board_functions, directory = txt_file_dir)
+        save_game_data(engine, depths, time_limits, df_filename, file_name, i, pgn_game, str_functions, board_functions, directory = txt_file_dir, columns_data = columns_data)
         i+=1
     
     if verbose:
@@ -504,6 +630,18 @@ def read_all(text_file_path, num_dataframes=None, skip_positions=0):
     return dataframes
 
 def initialize_data(data, depths, columns_data):
+    '''
+    Initializes a dictionary with data placeholders.
+    Dictionary of data will be filled with empty lists for all columns.
+
+    Parameters:
+    - data (dict): Dictionary to initialize.
+    - depths (list): List of depth values.
+    - columns_data (dict): Dictionary defining the columns of the DataFrame.
+
+    Returns:
+    - data (dict): Updated dictionary containing data.
+    '''
     for arg in columns_data.keys():
         if arg != "num_past_moves" and columns_data[arg] == True:
             if arg != "depths":
@@ -517,6 +655,25 @@ def initialize_data(data, depths, columns_data):
     return data
 
 def initalize_starting_moves(data, columns_data, game, board, str_functions, board_functions):
+    '''
+    Initializes data and file paths for starting moves.
+
+    Parameters:
+    - data (dict): Dictionary containing data.
+    - columns_data (dict): Dictionary defining the columns of the DataFrame.
+    - game: Chess game object.
+    - board: Chess board object.
+    - str_functions: A list of functions that convert string notation to bitboards.
+    - board_functions: A list of functions that generate bitboards from chess.Board objects.
+
+    Returns:
+    - data (dict): Updated dictionary containing data.
+    - file_path_queue (deque): Queue containing file paths.
+    - white_player (str): Name of the white player.
+    - white_elo (str): Elo rating of the white player.
+    - black_player (str): Name of the black player.
+    - black_elo (str): Elo rating of the black player.
+    '''
     str_board = board.fen()
     new_board = get_bitboards(str_board, board, str_functions, board_functions)
     empty_board = np.zeros_like(new_board)
@@ -549,6 +706,29 @@ def initalize_starting_moves(data, columns_data, game, board, str_functions, boa
     return data, file_path_queue, white_player, white_elo, black_player, black_elo
 
 def get_random_move(game, player_color, data, engine, depths, time_limits, white_elo, black_elo, file_path_queue, board, node, str_functions, board_functions):
+    '''
+    Performs a random move made by the bot.
+
+    Parameters:
+    - game: Chess game object.
+    - player_color: Color of the player.
+    - data (dict): Dictionary containing data.
+    - engine (str): Engine used for playing the game.
+    - depths (int): Depth of the search for the engine.
+    - time_limits (dict): Time limits for the game.
+    - white_elo (str): Elo rating of the white player.
+    - black_elo (str): Elo rating of the black player.
+    - file_path_queue (deque): Queue containing file paths.
+    - board: Chess board object.
+    - node: Chess node object.
+    - str_functions: A list of functions that convert string notation to bitboards.
+    - board_functions: A list of functions that generate bitboards from chess.Board objects.
+
+    Returns:
+    - data (dict): Updated dictionary containing data.
+    - file_path_queue (deque): Updated queue containing file paths.
+    - board: Updated chess board object.
+    '''
     legal_moves = list(board.legal_moves)
     bot_move = random.choice(legal_moves)
     bot_clock = node.clock()
@@ -578,6 +758,31 @@ def get_random_move(game, player_color, data, engine, depths, time_limits, white
     return data, file_path_queue, board
 
 def get_human_move(game, player_color, data, engine, depths, time_limits, white_player, white_elo, black_player, black_elo, file_path_queue, board, node, str_functions, board_functions):
+    '''
+    Performs a human move.
+
+    Parameters:
+    - game: Chess game object.
+    - player_color: Color of the player.
+    - data (dict): Dictionary containing data.
+    - engine (str): Engine used for playing the game.
+    - depths (int): Depth of the search for the engine.
+    - time_limits (dict): Time limits for the game.
+    - white_player (str): Name of the white player.
+    - white_elo (str): Elo rating of the white player.
+    - black_player (str): Name of the black player.
+    - black_elo (str): Elo rating of the black player.
+    - file_path_queue (deque): Queue containing file paths.
+    - board: Chess board object.
+    - node: Chess node object.
+    - str_functions: A list of functions that convert string notation to bitboards.
+    - board_functions: A list of functions that generate bitboards from chess.Board objects.
+
+    Returns:
+    - data (dict): Updated dictionary containing data.
+    - file_path_queue (deque): Updated queue containing file paths.
+    - board: Updated chess board object.
+    '''
     move = node.move
     clock = node.clock()
     board.push(move)
@@ -605,6 +810,21 @@ def get_human_move(game, player_color, data, engine, depths, time_limits, white_
     return data, file_path_queue, board
 
 def greedy_save_game(engine, depths, time_limits, game, str_functions, board_functions, columns_data):
+    '''
+    Saves the data of a chess game using a greedy strategy.
+
+    Parameters:
+    - engine: Chess engine object.
+    - depths (list): List of depth values.
+    - time_limits (list): List of time limits for the engine search.
+    - game: Chess game object.
+    - str_functions: A list of functions that convert string notation to bitboards.
+    - board_functions: A list of functions that generate bitboards from chess.Board objects.
+    - columns_data (dict): Dictionary defining the columns of the DataFrame.
+
+    Returns:
+    - df (DataFrame): DataFrame containing the saved data.
+    '''
     data = {}
     data = initialize_data(data, depths, columns_data)
     j=0
@@ -624,6 +844,25 @@ def greedy_read(directory_path, file_name, verbose = True, str_functions = [str_
                 stockfish_path = "D:\PikeBot\stockfish\stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], 
                 time_limits = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01], starting_game = 0, num_games = np.inf,
                 columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True}):
+    '''
+    Reads and processes chess game data from a compressed file using a greedy strategy. Instead of saving the dataframe, everything is stored in the memory directly from PGN file, allows for dynamic data reading without preprocessing.
+
+    Parameters:
+    - directory_path (str): Path to the directory containing the compressed file.
+    - file_name (str): Name of the compressed file.
+    - verbose (bool, optional): If True, prints information during processing. Default is True.
+    - str_functions (list, optional): List of functions to convert chess elements to strings. Default is [str_to_board_all_figures_colors].
+    - board_functions (list, optional): List of functions to interact with the chess board. Default is [get_all_attacks].
+    - stockfish_path (str, optional): Path to the Stockfish engine executable. Default is "D:\PikeBot\stockfish\stockfish-windows-x86-64-avx2.exe".
+    - depths (list, optional): List of depth values for engine search. Default is [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20].
+    - time_limits (list, optional): List of time limits for the engine search. Default is [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01].
+    - starting_game (int, optional): Index of the first game to process. Default is 0.
+    - num_games (int, optional): Number of games to process. Default is np.inf.
+    - columns_data (dict, optional): Dictionary defining the columns of the DataFrame. Default is {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True}.
+
+    Returns:
+    - data (list): List of DataFrames containing processed data from each game.
+    '''
     engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
     file_path = os.path.join(directory_path, file_name)
 
