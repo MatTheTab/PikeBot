@@ -7,6 +7,7 @@ from collections import deque
 import pandas as pd
 import chess.engine
 import random
+import gzip
 
 
 def str_to_bitboard_all_pieces(str_notation):
@@ -367,7 +368,7 @@ def save_game_data(engine, depths, time_limits, df_filename, file_path, game_num
     df_filepath = os.path.join(directory, df_filename)
     
     for _ in range(12):
-        file_path_queue.append(f"{file_path}_game_{game_number}_move_empty.npy")     
+        file_path_queue.append(f"{file_path}_game_{game_number}_move_empty.npy.gz")     
     
     white_player = game.headers["White"]
     black_player = game.headers["Black"]
@@ -382,7 +383,17 @@ def save_game_data(engine, depths, time_limits, df_filename, file_path, game_num
     np.save(empty_filename, empty_board)
     np.save(filename, new_board)
 
-    data["current_move"].append(f"{file_path}_game_{game_number}_move_{j}.npy")
+    with open(empty_filename, 'rb') as f_in:
+        with gzip.open(empty_filename+".gz", 'wb') as f_out:
+            f_out.writelines(f_in)
+    os.remove(empty_filename)
+
+    with open(filename, 'rb') as f_in:
+        with gzip.open(filename+".gz", 'wb') as f_out:
+            f_out.writelines(f_in)
+    os.remove(filename)
+
+    data["current_move"].append(f"{file_path}_game_{game_number}_move_{j}.npy.gz")
     data["event"].append(game.headers["Event"])
     for node in game.mainline():
         clock = node.clock()
@@ -397,7 +408,7 @@ def save_game_data(engine, depths, time_limits, df_filename, file_path, game_num
     for temp_path in file_path_queue:
         data[f"past_move_{x}"].append(temp_path)
         x+=1
-    file_path_queue.append(filename)
+    file_path_queue.append(filename+".gz")
     
     for node in game.mainline():
         j+=1
@@ -414,8 +425,12 @@ def save_game_data(engine, depths, time_limits, df_filename, file_path, game_num
             x+=1
         bot_new_board = get_bitboards(bot_str_board, board, str_functions, board_functions)
         bot_filename = os.path.join(directory, f"bot_{file_path}_game_{game_number}_move_{j}.npy")
-        np.save(bot_filename, bot_new_board)  
-        data["current_move"].append(f"bot_{file_path}_game_{game_number}_move_{j}.npy")
+        np.save(bot_filename, bot_new_board)
+        with open(bot_filename, 'rb') as f_in:
+            with gzip.open(bot_filename+".gz", 'wb') as f_out:
+                f_out.writelines(f_in)  
+        os.remove(bot_filename)
+        data["current_move"].append(f"bot_{file_path}_game_{game_number}_move_{j}.npy.gz")
 
         data["human"].append(False)
         data["event"].append(game.headers["Event"])
@@ -443,9 +458,13 @@ def save_game_data(engine, depths, time_limits, df_filename, file_path, game_num
             x+=1
         new_board = get_bitboards(str_board, board, str_functions, board_functions)
         filename = os.path.join(directory, f"{file_path}_game_{game_number}_move_{j}.npy")
-        np.save(filename, new_board)  
-        data["current_move"].append(f"{file_path}_game_{game_number}_move_{j}.npy")
-        file_path_queue.append(f"{file_path}_game_{game_number}_move_{j}.npy") #Do not add this to random moves!
+        np.save(filename, new_board)
+        with open(filename, 'rb') as f_in:
+            with gzip.open(filename+".gz", 'wb') as f_out:
+                f_out.writelines(f_in)
+        os.remove(filename)  
+        data["current_move"].append(f"{file_path}_game_{game_number}_move_{j}.npy.gz")
+        file_path_queue.append(f"{file_path}_game_{game_number}_move_{j}.npy.gz") #Do not add this to random moves!
 
         data["human"].append(True)
         data["event"].append(game.headers["Event"])
@@ -462,13 +481,13 @@ def save_game_data(engine, depths, time_limits, df_filename, file_path, game_num
             set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data)
 
     df = pd.DataFrame(data)
-    df.to_csv(df_filepath, index=False)
+    df.to_csv(df_filepath, index=False, compression='gzip')
 
 
 
-def save_data(txt_file_dir, txt_file_name, directory_path, file_name, verbose = True, str_functions = [str_to_board_all_figures_colors], board_functions = [get_all_attacks], stockfish_path = "D:\PikeBot\stockfish\stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], time_limits = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]): #Double check time limits later
+def save_data(txt_file_dir, txt_file_name, directory_path, file_name, verbose = True, str_functions = [str_to_board_all_figures_colors], board_functions = [get_all_attacks], stockfish_path = "D:\PikeBot\stockfish\stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], time_limits = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01], max_num_games = np.inf): #Double check time limits later
     '''
-    Saves data extracted from PGN games into CSV files.
+    Saves data extracted from PGN games into CSV files. Uses .gz compression to minimize file size.
     
     Parameters:
     - txt_file_dir (str): The directory path where the text files containing filenames will be stored.
@@ -481,6 +500,7 @@ def save_data(txt_file_dir, txt_file_name, directory_path, file_name, verbose = 
     - stockfish_path (str, optional): The path to the Stockfish chess engine executable. Defaults to "D:\PikeBot\stockfish\stockfish-windows-x86-64-avx2.exe".
     - depths (list, optional): List of depths for Stockfish engine analysis. Defaults to [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20].
     - time_limits (list, optional): List of time limits for Stockfish engine analysis. Defaults to [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]. Should be the same length as depths list.
+    - max_num_games (int, optional): Number of games to read from the PGN file, by default np.infinite, i.e. all games will be read from the file.
     '''
     engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
     file_path = os.path.join(directory_path, file_name)
@@ -495,14 +515,14 @@ def save_data(txt_file_dir, txt_file_name, directory_path, file_name, verbose = 
     i = 0
     while True:
         pgn_game = chess.pgn.read_game(pgn_io)
-        if pgn_game is None:
+        if pgn_game is None or i >= max_num_games:
             break
 
-        df_filename = f"{file_name}_game_{i}_df.csv"
+        df_filename = f"{file_name}_game_{i}_df.csv.gz"
         mode = 'a' if os.path.exists(txt_file_path) else 'w'
         with open(txt_file_path, mode) as file:
           file.write(df_filename + '\n')
-        save_game_data(engine, depths, time_limits, df_filename, file_name, i, pgn_game, str_functions, board_functions)
+        save_game_data(engine, depths, time_limits, df_filename, file_name, i, pgn_game, str_functions, board_functions, directory = txt_file_dir)
         i+=1
     
     if verbose:
@@ -510,7 +530,7 @@ def save_data(txt_file_dir, txt_file_name, directory_path, file_name, verbose = 
 
 def read_data(text_file_path, num_dataframes=None, skip_positions=0):
     '''
-    Reads data from multiple CSV files as pandas DataFrames.
+    Reads data from multiple CSV files as pandas DataFrames. Supports .csv files compressed as .gz files.
 
     Parameters:
     - text_file_path: Path to the text file containing a list of CSV filenames.
@@ -528,7 +548,10 @@ def read_data(text_file_path, num_dataframes=None, skip_positions=0):
         csv_filenames = csv_filenames[:num_dataframes]
     for csv_filename in csv_filenames:
         csv_file_path = os.path.join(os.path.dirname(text_file_path), csv_filename)
-        df = pd.read_csv(csv_file_path)
+        if csv_filename.endswith('.gz'):
+            df = pd.read_csv(csv_file_path, compression='gzip')
+        else:
+            df = pd.read_csv(csv_file_path)
         dataframes.append(df)
     
     return dataframes
@@ -538,6 +561,7 @@ def read_data(text_file_path, num_dataframes=None, skip_positions=0):
 def read_all(text_file_path, num_dataframes=None, skip_positions=0):
     '''
     Reads data from multiple CSV files along with associated numpy array files (npy) and returns as pandas DataFrames.
+    Supports .csv files compressed as .gz files and .npy files compressed as .gz files.
 
     Parameters:
     - text_file_path: Path to the text file containing a list of CSV filenames.
@@ -555,14 +579,20 @@ def read_all(text_file_path, num_dataframes=None, skip_positions=0):
         csv_filenames = csv_filenames[:num_dataframes]
     for csv_filename in csv_filenames:
         csv_file_path = os.path.join(os.path.dirname(text_file_path), csv_filename)
-        df = pd.read_csv(csv_file_path)
+        if csv_filename.endswith('.gz'):
+            df = pd.read_csv(csv_file_path, compression='gzip')
+        else:
+            df = pd.read_csv(csv_file_path)
         for column_name in df.columns:
             if 'move' in column_name:
                 for index, row in df.iterrows():
                     npy_file_path = os.path.join(os.path.dirname(csv_file_path), row[column_name])
-                    numpy_array = np.load(npy_file_path)
+                    if npy_file_path.endswith('.gz'):
+                        with gzip.open(npy_file_path, 'rb') as f:
+                            numpy_array = np.load(f)
+                    else:
+                        numpy_array = np.load(npy_file_path)
                     df.at[index, column_name] = numpy_array
-        
         dataframes.append(df)
     return dataframes
 
