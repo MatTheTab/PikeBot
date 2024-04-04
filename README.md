@@ -5,7 +5,7 @@ What sets PikeBot apart from other chess bots is its commitment to utilizing hum
 
 ## Developer Notes
 Project directory structure:
-
+```
 Pikebot/
 ├── Data/
 │   ├── Train/
@@ -28,7 +28,7 @@ Pikebot/
 │   ├── data_utils
 │   └── chess_utils
 └── *All Notebooks*
-
+```
 Small_Data is for smaller PGN files (~100 000 games) and can be used for testing some ideas without running the code on bigger PGN files. Directories with 'Preprocessed' in the name show output of data-saving functions, i.e. effects of transformation from PGN files to .txt, .csv and .npy files, for more info see documentation of data_utils functions and Data_reading_tutorial.ipynb file.
 
 Default dataframe columns explanation:
