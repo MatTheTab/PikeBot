@@ -479,7 +479,8 @@ def get_save_human_move(board, node, game_number, directory, str_functions, boar
     return data, file_path_queue, filename, board
 
 def save_game_data(engine, depths, time_limits, df_filename, file_path, game_number, game, str_functions, board_functions,
-                    directory = "D:\\PikeBot\\New_Processed_Data", columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True}):
+                    directory = "D:\\PikeBot\\New_Processed_Data", columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True},
+                    shuffle = True, seed = 42):
     '''
     Read and transform data from PGN game format to a DataFrame with appropriate information, and save it to a compressed CSV file.
 
@@ -495,6 +496,8 @@ def save_game_data(engine, depths, time_limits, df_filename, file_path, game_num
     - board_functions: A list of functions that generate bitboards from chess.Board objects.
     - directory (str, optional): Directory path where the data will be saved. Defaults to "D:\\PikeBot\\New_Processed_Data".
     - columns_data (dict, optional): Dictionary defining the columns of the DataFrame. Defaults to {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True}.
+    - shuffle (bool, optional): If the datframe should be shuffled before being returned, default True
+    - seed (int, optional): seed for shuffling, default 42
     '''
 
     data = {}
@@ -511,6 +514,8 @@ def save_game_data(engine, depths, time_limits, df_filename, file_path, game_num
         data, file_path_queue, board = get_save_random_move(board, node, game_number, directory, str_functions, board_functions, file_path, j, file_path_queue, data, player_color, engine, depths, time_limits, game, white_elo, black_elo)
         data, file_path_queue, filename, board = get_save_human_move(board, node, game_number, directory, str_functions, board_functions, file_path, j, file_path_queue, data, player_color, engine, depths, time_limits, game, white_player, white_elo, black_player, black_elo)
     df = pd.DataFrame(data)
+    if shuffle:
+        df = df.sample(frac=1, random_state=seed).reset_index(drop=True)
     df.to_csv(df_filepath, index=False, compression='gzip')
 
 
@@ -518,7 +523,8 @@ def save_game_data(engine, depths, time_limits, df_filename, file_path, game_num
 def save_data(txt_file_dir, txt_file_name, directory_path, file_name, verbose = True, str_functions = [str_to_board_all_figures_colors], board_functions = [get_all_attacks], 
               stockfish_path = "D:\PikeBot\stockfish\stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], 
               time_limits = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01], max_num_games = np.inf,
-              columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True}): #Double check time limits later
+              columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True},
+              shuffle = True, seed = 42): #Double check time limits later
     '''
     Saves data extracted from PGN games into CSV files. Uses .gz compression to minimize file size.
     
@@ -534,6 +540,8 @@ def save_data(txt_file_dir, txt_file_name, directory_path, file_name, verbose = 
     - depths (list, optional): List of depths for Stockfish engine analysis. Defaults to [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20].
     - time_limits (list, optional): List of time limits for Stockfish engine analysis. Defaults to [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]. Should be the same length as depths list.
     - max_num_games (int, optional): Number of games to read from the PGN file, by default np.infinite, i.e. all games will be read from the file.
+    - shuffle (bool, optional): If the datframe should be shuffled before being returned, default True
+    - seed (int, optional): seed for shuffling, default 42
     '''
     engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
     file_path = os.path.join(directory_path, file_name)
@@ -555,13 +563,13 @@ def save_data(txt_file_dir, txt_file_name, directory_path, file_name, verbose = 
         mode = 'a' if os.path.exists(txt_file_path) else 'w'
         with open(txt_file_path, mode) as file:
           file.write(df_filename + '\n')
-        save_game_data(engine, depths, time_limits, df_filename, file_name, i, pgn_game, str_functions, board_functions, directory = txt_file_dir, columns_data = columns_data)
+        save_game_data(engine, depths, time_limits, df_filename, file_name, i, pgn_game, str_functions, board_functions, directory = txt_file_dir, columns_data = columns_data, shuffle = shuffle, seed = seed)
         i+=1
     
     if verbose:
         print(f"Num processed games in a file = {i}")
 
-def read_data(text_file_path, num_dataframes=None, skip_positions=0):
+def read_data(text_file_path, num_dataframes=None, skip_positions=0, shuffle = True, seed = 42):
     '''
     Reads data from multiple CSV files as pandas DataFrames. Supports .csv files compressed as .gz files.
 
@@ -569,6 +577,8 @@ def read_data(text_file_path, num_dataframes=None, skip_positions=0):
     - text_file_path: Path to the text file containing a list of CSV filenames.
     - num_dataframes: Number of CSV files to read. If None, reads all files. Default is None.
     - skip_positions: Number of CSV filenames to skip from the beginning of the list. Default is 0.
+    - shuffle (bool, optional): if list reperesenting the games should be shuffled
+    - seed (int, optional): seed for shuffling, default 42
 
     Returns:
     - dataframes: A list of pandas DataFrames containing the data read from the CSV files.
@@ -587,11 +597,14 @@ def read_data(text_file_path, num_dataframes=None, skip_positions=0):
             df = pd.read_csv(csv_file_path)
         dataframes.append(df)
     
+    if shuffle:
+        random.seed(seed)
+        random.shuffle(dataframes)
     return dataframes
 
 
 
-def read_all(text_file_path, num_dataframes=None, skip_positions=0):
+def read_all(text_file_path, num_dataframes=None, skip_positions=0, shuffle = True, seed = 42):
     '''
     Reads data from multiple CSV files along with associated numpy array files (npy) and returns as pandas DataFrames.
     Supports .csv files compressed as .gz files and .npy files compressed as .gz files.
@@ -600,6 +613,8 @@ def read_all(text_file_path, num_dataframes=None, skip_positions=0):
     - text_file_path: Path to the text file containing a list of CSV filenames.
     - num_dataframes: Number of CSV files to read. If None, reads all files. Default is None.
     - skip_positions: Number of CSV filenames to skip from the beginning of the list. Default is 0.
+    - shuffle (bool, optional): if list reperesenting the games should be shuffled
+    - seed (int, optional): seed for shuffling, default 42
 
     Returns:
     - dataframes: A list of pandas DataFrames containing the data read from the CSV files along with associated numpy arrays.
@@ -627,6 +642,9 @@ def read_all(text_file_path, num_dataframes=None, skip_positions=0):
                         numpy_array = np.load(npy_file_path)
                     df.at[index, column_name] = numpy_array
         dataframes.append(df)
+    if shuffle:
+        random.seed(seed)
+        random.shuffle(dataframes)
     return dataframes
 
 def initialize_data(data, depths, columns_data):
@@ -809,7 +827,7 @@ def get_human_move(game, player_color, data, engine, depths, time_limits, white_
         set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data)
     return data, file_path_queue, board
 
-def greedy_save_game(engine, depths, time_limits, game, str_functions, board_functions, columns_data):
+def greedy_save_game(engine, depths, time_limits, game, str_functions, board_functions, columns_data, shuffle = True, seed = 42):
     '''
     Saves the data of a chess game using a greedy strategy.
 
@@ -821,6 +839,8 @@ def greedy_save_game(engine, depths, time_limits, game, str_functions, board_fun
     - str_functions: A list of functions that convert string notation to bitboards.
     - board_functions: A list of functions that generate bitboards from chess.Board objects.
     - columns_data (dict): Dictionary defining the columns of the DataFrame.
+    - shuffle (bool, optional): If the datframe should be shuffled before being returned, default True
+    - seed (int, optional): seed for shuffling, default 42
 
     Returns:
     - df (DataFrame): DataFrame containing the saved data.
@@ -838,12 +858,15 @@ def greedy_save_game(engine, depths, time_limits, game, str_functions, board_fun
         data, file_path_queue, board = get_random_move(game, player_color, data, engine, depths, time_limits, white_elo, black_elo, file_path_queue, board, node, str_functions, board_functions)
         data, file_path_queue, board = get_human_move(game, player_color, data, engine, depths, time_limits, white_player, white_elo, black_player, black_elo, file_path_queue, board, node, str_functions, board_functions)
     df = pd.DataFrame(data)
+    if shuffle:
+        df = df.sample(frac=1, random_state=seed).reset_index(drop=True)
     return df
 
 def greedy_read(directory_path, file_name, verbose = True, str_functions = [str_to_board_all_figures_colors], board_functions = [get_all_attacks], 
                 stockfish_path = "D:\PikeBot\stockfish\stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], 
                 time_limits = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01], starting_game = 0, num_games = np.inf,
-                columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True}):
+                columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True},
+                shuffle_df = True, shuffle_list = True, list_seed = 42):
     '''
     Reads and processes chess game data from a compressed file using a greedy strategy. Instead of saving the dataframe, everything is stored in the memory directly from PGN file, allows for dynamic data reading without preprocessing.
 
@@ -859,6 +882,9 @@ def greedy_read(directory_path, file_name, verbose = True, str_functions = [str_
     - starting_game (int, optional): Index of the first game to process. Default is 0.
     - num_games (int, optional): Number of games to process. Default is np.inf.
     - columns_data (dict, optional): Dictionary defining the columns of the DataFrame. Default is {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True}.
+    - shuffle_df (bool, optional): If each datframe representing a game should be shuffled, default True
+    - shuffle_list (bool, optional): If list representing num_games should be shuffled, default True
+    - list_seed (int, optional): Seed for list shuffle
 
     Returns:
     - data (list): List of DataFrames containing processed data from each game.
@@ -881,9 +907,12 @@ def greedy_read(directory_path, file_name, verbose = True, str_functions = [str_
             continue
         if pgn_game is None or i >= num_games:
             break
-        df = greedy_save_game(engine, depths, time_limits, pgn_game, str_functions, board_functions, columns_data)
+        df = greedy_save_game(engine, depths, time_limits, pgn_game, str_functions, board_functions, columns_data, shuffle = shuffle_df)
         data.append(df)
         i+=1
+    if shuffle_list:
+        random.seed(list_seed)
+        random.shuffle(data)
     
     if verbose:
         print(f"Num processed games in a file = {i}")
