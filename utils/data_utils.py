@@ -273,7 +273,7 @@ def compress_file(filename):
             f_out.writelines(f_in)
     os.remove(filename)
 
-def get_initial_filepaths(directory, game_number, df_filename, file_path, columns_data, j):
+def get_initial_boards(columns_data):
     '''
     Generates initial file paths and a file path queue.
 
@@ -291,13 +291,10 @@ def get_initial_filepaths(directory, game_number, df_filename, file_path, column
     - empty_filename (str): Path to the empty filename.
     - df_filepath (str): Path to the DataFrame file.
     '''
-    file_path_queue = deque(maxlen=columns_data["num_past_moves"])
-    filename = os.path.join(directory, f"{file_path}_game_{game_number}_move_{j}.npy")
-    empty_filename = os.path.join(directory, f"{file_path}_game_{game_number}_move_empty.npy")
-    df_filepath = os.path.join(directory, df_filename)
-    return file_path_queue, filename, empty_filename, df_filepath
+    board_queue = deque(maxlen=columns_data["num_past_moves"])
+    return board_queue
 
-def get_initial_game_state(data, file_path_queue, game, engine, depths, time_limits, game_number, file_path, empty_filename, filename, str_functions, board_functions, columns_data, j):
+def get_initial_game_state(data, board_queue, game, engine, depths, time_limits, str_functions, board_functions, columns_data):
     '''
     Initializes game state and saves initial board configurations.
 
@@ -326,8 +323,6 @@ def get_initial_game_state(data, file_path_queue, game, engine, depths, time_lim
     - black_elo (str): Elo rating of the black player.
     - file_path_queue (deque): Updated queue containing file paths.
     '''
-    for _ in range(columns_data["num_past_moves"]):
-        file_path_queue.append(f"{file_path}_game_{game_number}_move_empty.npy.gz")     
     white_player = game.headers["White"]
     black_player = game.headers["Black"]
     white_elo = game.headers["WhiteElo"]
@@ -337,11 +332,9 @@ def get_initial_game_state(data, file_path_queue, game, engine, depths, time_lim
     str_board = board.fen()
     new_board = get_bitboards(str_board, board, str_functions, board_functions)
     empty_board = np.zeros_like(new_board)
-    np.save(empty_filename, empty_board)
-    np.save(filename, new_board)
-    compress_file(empty_filename)
-    compress_file(filename)
-    data["current_move"].append(f"{file_path}_game_{game_number}_move_{j}.npy.gz")
+    for _ in range(columns_data["num_past_moves"]):
+        board_queue.append(empty_board)
+    data["current_move"].append(new_board)
     data["event"].append(game.headers["Event"])
     for node in game.mainline():
         clock = node.clock()
@@ -352,13 +345,13 @@ def get_initial_game_state(data, file_path_queue, game, engine, depths, time_lim
     data["elo"].append(white_elo)
     data["human"].append(True)
     x=1
-    for temp_path in file_path_queue:
-        data[f"past_move_{x}"].append(temp_path)
+    for temp_board in board_queue:
+        data[f"past_move_{x}"].append(temp_board)
         x+=1
-    file_path_queue.append(filename+".gz")
-    return data, board, white_player, white_elo, black_player, black_elo, file_path_queue
+    board_queue.append(new_board)
+    return data, board, white_player, white_elo, black_player, black_elo, board_queue
 
-def get_save_random_move(board, node, game_number, directory, str_functions, board_functions, file_path, j, file_path_queue, data, player_color, engine, depths, time_limits, game, white_elo, black_elo):
+def get_save_random_move(board, node, str_functions, board_functions, board_queue, data, player_color, engine, depths, time_limits, game, white_elo, black_elo):
     '''
     Performs and saves a random move made by the bot.
 
@@ -392,14 +385,11 @@ def get_save_random_move(board, node, game_number, directory, str_functions, boa
     board.push(bot_move)
     bot_str_board = board.fen()
     x=1
-    for temp_path in file_path_queue:
-        data[f"past_move_{x}"].append(temp_path)
+    for temp_board in board_queue:
+        data[f"past_move_{x}"].append(temp_board)
         x+=1
     bot_new_board = get_bitboards(bot_str_board, board, str_functions, board_functions)
-    bot_filename = os.path.join(directory, f"bot_{file_path}_game_{game_number}_move_{j}.npy")
-    np.save(bot_filename, bot_new_board)
-    compress_file(bot_filename)
-    data["current_move"].append(f"bot_{file_path}_game_{game_number}_move_{j}.npy.gz")
+    data["current_move"].append(bot_new_board)
 
     data["human"].append(False)
     data["event"].append(game.headers["Event"])
@@ -415,9 +405,9 @@ def get_save_random_move(board, node, game_number, directory, str_functions, boa
         data["elo"].append(black_elo)
         set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data)
     board.pop()
-    return data, file_path_queue, board 
+    return data, board_queue, board 
 
-def get_save_human_move(board, node, game_number, directory, str_functions, board_functions, file_path, j, file_path_queue, data, player_color, engine, depths, time_limits, game, white_player, white_elo, black_player, black_elo):
+def get_save_human_move(board, node, str_functions, board_functions, board_qeue, data, player_color, engine, depths, time_limits, game, white_player, white_elo, black_player, black_elo):
     '''
     Performs and saves a human move.
 
@@ -453,15 +443,12 @@ def get_save_human_move(board, node, game_number, directory, str_functions, boar
     board.push(move)
     str_board = board.fen()
     x=1
-    for temp_path in file_path_queue:
-        data[f"past_move_{x}"].append(temp_path)
+    for temp_board in board_qeue:
+        data[f"past_move_{x}"].append(temp_board)
         x+=1
     new_board = get_bitboards(str_board, board, str_functions, board_functions)
-    filename = os.path.join(directory, f"{file_path}_game_{game_number}_move_{j}.npy")
-    np.save(filename, new_board)
-    compress_file(filename)
-    data["current_move"].append(f"{file_path}_game_{game_number}_move_{j}.npy.gz")
-    file_path_queue.append(f"{file_path}_game_{game_number}_move_{j}.npy.gz")
+    data["current_move"].append(new_board)
+    board_qeue.append(new_board)
 
     data["human"].append(True)
     data["event"].append(game.headers["Event"])
@@ -476,11 +463,11 @@ def get_save_human_move(board, node, game_number, directory, str_functions, boar
         data["color"].append("Black")
         data["elo"].append(black_elo)
         set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data)
-    return data, file_path_queue, filename, board
+    return data, board_qeue, board
 
 def save_game_data(engine, depths, time_limits, df_filename, file_path, game_number, game, str_functions, board_functions,
                     directory = "D:\\PikeBot\\New_Processed_Data", columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True},
-                    shuffle = True, seed = 42):
+                    shuffle = True, seed = 42, batch_size = 10000, all_games_df = None, max_games = np.inf):
     '''
     Read and transform data from PGN game format to a DataFrame with appropriate information, and save it to a compressed CSV file.
 
@@ -503,28 +490,34 @@ def save_game_data(engine, depths, time_limits, df_filename, file_path, game_num
     data = {}
     data = initialize_data(data, depths, columns_data)
     j=0
-    file_path_queue, filename, empty_filename, df_filepath = get_initial_filepaths(directory, game_number, df_filename, file_path, columns_data, j)
-    data, board, white_player, white_elo, black_player, black_elo, file_path_queue = get_initial_game_state(data, file_path_queue, game, engine,
-                                                                                                             depths, time_limits, game_number,
-                                                                                                               file_path, empty_filename, filename,
-                                                                                                                 str_functions, board_functions, columns_data, j)
+    board_queue = get_initial_boards(columns_data)
+    data, board, white_player, white_elo, black_player, black_elo, board_queue = get_initial_game_state(data, board_queue, game, engine,
+                                                                                                        depths, time_limits, str_functions, board_functions, columns_data)
     for node in game.mainline():
         j+=1
         player_color = board.turn
-        data, file_path_queue, board = get_save_random_move(board, node, game_number, directory, str_functions, board_functions, file_path, j, file_path_queue, data, player_color, engine, depths, time_limits, game, white_elo, black_elo)
-        data, file_path_queue, filename, board = get_save_human_move(board, node, game_number, directory, str_functions, board_functions, file_path, j, file_path_queue, data, player_color, engine, depths, time_limits, game, white_player, white_elo, black_player, black_elo)
+        data, board_queue, board = get_save_random_move(board, node, str_functions, board_functions, board_queue, data, player_color, engine, depths, time_limits, game, white_elo, black_elo)
+        data, board_queue, board = get_save_human_move(board, node, str_functions, board_functions, board_queue, data, player_color, engine, depths, time_limits, game, white_player, white_elo, black_player, black_elo)
     df = pd.DataFrame(data)
-    if shuffle:
-        df = df.sample(frac=1, random_state=seed).reset_index(drop=True)
-    df.to_csv(df_filepath, index=False, compression='gzip')
+    all_games_df = pd.concat([all_games_df, df], axis=0)
+    all_games_df.reset_index(drop=True, inplace=True)
+    if game_number+1 == max_games or (game_number>0 and game_number%batch_size == 0):
+        if shuffle:
+            all_games_df = all_games_df.sample(frac=1, random_state=seed).reset_index(drop=True)
+        game_filename = f"{directory}\\game_batch_{game_number//batch_size}.npy"
+        np.save(game_filename, all_games_df.to_numpy())
+        compress_file(game_filename)
+    return all_games_df
 
+def save_column_names(file_path, columns):
+    with open(file_path, 'w') as file:
+        file.write('\n'.join(columns))
 
-
-def save_data(txt_file_dir, txt_file_name, directory_path, file_name, verbose = True, str_functions = [str_to_board_all_figures_colors], board_functions = [get_all_attacks], 
+def save_data(txt_file_dir, directory_path, file_name, verbose = True, str_functions = [str_to_board_all_figures_colors], board_functions = [get_all_attacks], 
               stockfish_path = "D:\PikeBot\stockfish\stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], 
               time_limits = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01], max_num_games = np.inf,
               columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True},
-              shuffle = True, seed = 42): #Double check time limits later
+              shuffle = True, seed = 42, batch_size = 10000): #Double check time limits later
     '''
     Saves data extracted from PGN games into CSV files. Uses .gz compression to minimize file size.
     
@@ -545,8 +538,17 @@ def save_data(txt_file_dir, txt_file_name, directory_path, file_name, verbose = 
     '''
     engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
     file_path = os.path.join(directory_path, file_name)
-    txt_file_path = os.path.join(txt_file_dir, txt_file_name)
-
+    columns = ['human', 'player', 'elo', 'color', 'event', 'clock',
+       'stockfish_score_depth_1', 'stockfish_score_depth_2',
+       'stockfish_score_depth_3', 'stockfish_score_depth_4',
+       'stockfish_score_depth_5', 'stockfish_score_depth_8',
+       'stockfish_score_depth_10', 'stockfish_score_depth_12',
+       'stockfish_score_depth_15', 'stockfish_score_depth_16',
+       'stockfish_score_depth_18', 'stockfish_score_depth_20', 'past_move_1',
+       'past_move_2', 'past_move_3', 'past_move_4', 'past_move_5',
+       'past_move_6', 'past_move_7', 'past_move_8', 'past_move_9',
+       'past_move_10', 'past_move_11', 'past_move_12', 'current_move']
+    all_games_df = pd.DataFrame(columns=columns)
     with open(file_path, "rb") as compressed_file:
         dctx = zstandard.ZstdDecompressor()
         with dctx.stream_reader(compressed_file) as decompressed_file:
@@ -554,16 +556,16 @@ def save_data(txt_file_dir, txt_file_name, directory_path, file_name, verbose = 
 
     pgn_io = io.StringIO(pgn_text)
     i = 0
+    save_column_names(txt_file_dir + "\\column_names.txt", columns=columns)
     while True:
         pgn_game = chess.pgn.read_game(pgn_io)
         if pgn_game is None or i >= max_num_games:
             break
 
         df_filename = f"{file_name}_game_{i}_df.csv.gz"
-        mode = 'a' if os.path.exists(txt_file_path) else 'w'
-        with open(txt_file_path, mode) as file:
-          file.write(df_filename + '\n')
-        save_game_data(engine, depths, time_limits, df_filename, file_name, i, pgn_game, str_functions, board_functions, directory = txt_file_dir, columns_data = columns_data, shuffle = shuffle, seed = seed)
+        all_games_df = save_game_data(engine, depths, time_limits, df_filename, file_name, i, pgn_game, str_functions, board_functions, directory = txt_file_dir, 
+                                      columns_data = columns_data, shuffle = shuffle, seed = seed, batch_size = batch_size, max_games=max_num_games, 
+                                      all_games_df=all_games_df)
         i+=1
     
     if verbose:
@@ -917,3 +919,11 @@ def greedy_read(directory_path, file_name, verbose = True, str_functions = [str_
     if verbose:
         print(f"Num processed games in a file = {i}")
     return data
+
+def read(data_file, column_names_file):
+    with gzip.open(data_file, 'rb') as f:
+        data = np.load(f, allow_pickle=True)
+    with open(column_names_file, 'r') as file:
+        column_names = file.read().splitlines()
+    df = pd.DataFrame(data, columns=column_names)
+    return df
