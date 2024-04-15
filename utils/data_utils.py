@@ -278,18 +278,10 @@ def get_initial_boards(columns_data):
     Generates initial file paths and a file path queue.
 
     Parameters:
-    - directory (str): Directory path.
-    - game_number (int): Number of the game.
-    - df_filename (str): Filename for the DataFrame.
-    - file_path (str): File path for the game data.
     - columns_data (dict): Dictionary defining the columns of the DataFrame.
-    - j (int): Move number.
 
     Returns:
-    - file_path_queue (deque): Queue containing file paths.
-    - filename (str): Path to the filename.
-    - empty_filename (str): Path to the empty filename.
-    - df_filepath (str): Path to the DataFrame file.
+    - board_queue (deque): Queue containing board games.
     '''
     board_queue = deque(maxlen=columns_data["num_past_moves"])
     return board_queue
@@ -300,19 +292,16 @@ def get_initial_game_state(data, board_queue, game, engine, depths, time_limits,
 
     Parameters:
     - data (dict): Dictionary containing data.
-    - file_path_queue (deque): Queue containing file paths.
+    - board_queue (deque): Queue containing board games.
     - game: Chess game object.
     - engine (str): Engine used for playing the game.
     - depths (int): Depth of the search for the engine.
     - time_limits (dict): Time limits for the game.
-    - game_number (int): Number of the game.
-    - file_path (str): File path for the game data.
-    - empty_filename (str): Path to the empty filename.
-    - filename (str): Path to the filename.
-    - str_functions: A list of functions that convert string notation to bitboards.
-    - board_functions: A list of functions that generate bitboards from chess.Board objects.
-    - columns_data (dict): Dictionary defining the columns of the DataFrame.
-    - j (int): Move number.
+    - depths (list) - list of depth of the engine
+    - time_limits (list) - list of times for engine
+    - str_functions (list) - functions to use to create bitboards based on str representation
+    - board_functions (list) - functions to use to create bitboards based on board representations
+    - columns_data (list) - columns used for the creation of dataframe
 
     Returns:
     - data (dict): Updated dictionary containing data.
@@ -321,7 +310,7 @@ def get_initial_game_state(data, board_queue, game, engine, depths, time_limits,
     - white_elo (str): Elo rating of the white player.
     - black_player (str): Name of the black player.
     - black_elo (str): Elo rating of the black player.
-    - file_path_queue (deque): Updated queue containing file paths.
+    - board_queue (deque): Queue containing board games.
     '''
     white_player = game.headers["White"]
     black_player = game.headers["Black"]
@@ -362,9 +351,7 @@ def get_save_random_move(board, node, str_functions, board_functions, board_queu
     - directory (str): Directory path.
     - str_functions: A list of functions that convert string notation to bitboards.
     - board_functions: A list of functions that generate bitboards from chess.Board objects.
-    - file_path (str): File path for the game data.
-    - j (int): Move number.
-    - file_path_queue (deque): Queue containing file paths.
+    - board_queue (deque): Queue containing board games.
     - data (dict): Dictionary containing data.
     - player_color: Color of the player.
     - engine (str): Engine used for playing the game.
@@ -414,13 +401,11 @@ def get_save_human_move(board, node, str_functions, board_functions, board_qeue,
     Parameters:
     - board: Chess board object.
     - node: Chess node object.
-    - game_number (int): Number of the game.
-    - directory (str): Directory path.
     - str_functions: A list of functions that convert string notation to bitboards.
     - board_functions: A list of functions that generate bitboards from chess.Board objects.
     - file_path (str): File path for the game data.
     - j (int): Move number.
-    - file_path_queue (deque): Queue containing file paths.
+    - board_queue (deque): Queue containing board games.
     - data (dict): Dictionary containing data.
     - player_color: Color of the player.
     - engine (str): Engine used for playing the game.
@@ -465,7 +450,7 @@ def get_save_human_move(board, node, str_functions, board_functions, board_qeue,
         set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data)
     return data, board_qeue, board
 
-def save_game_data(engine, depths, time_limits, df_filename, file_path, game_number, game, str_functions, board_functions,
+def save_game_data(engine, depths, time_limits, game_number, game, str_functions, board_functions,
                     directory = "D:\\PikeBot\\New_Processed_Data", columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True},
                     shuffle = True, seed = 42, batch_size = 10000, all_games_df = None, max_games = np.inf):
     '''
@@ -563,91 +548,12 @@ def save_data(txt_file_dir, directory_path, file_name, verbose = True, str_funct
             break
 
         df_filename = f"{file_name}_game_{i}_df.csv.gz"
-        all_games_df = save_game_data(engine, depths, time_limits, df_filename, file_name, i, pgn_game, str_functions, board_functions, directory = txt_file_dir, 
+        all_games_df = save_game_data(engine, depths, time_limits, i, pgn_game, str_functions, board_functions, directory = txt_file_dir, 
                                       columns_data = columns_data, shuffle = shuffle, seed = seed, batch_size = batch_size, max_games=max_num_games, 
                                       all_games_df=all_games_df)
         i+=1
-    
     if verbose:
         print(f"Num processed games in a file = {i}")
-
-def read_data(text_file_path, num_dataframes=None, skip_positions=0, shuffle = True, seed = 42):
-    '''
-    Reads data from multiple CSV files as pandas DataFrames. Supports .csv files compressed as .gz files.
-
-    Parameters:
-    - text_file_path: Path to the text file containing a list of CSV filenames.
-    - num_dataframes: Number of CSV files to read. If None, reads all files. Default is None.
-    - skip_positions: Number of CSV filenames to skip from the beginning of the list. Default is 0.
-    - shuffle (bool, optional): if list reperesenting the games should be shuffled
-    - seed (int, optional): seed for shuffling, default 42
-
-    Returns:
-    - dataframes: A list of pandas DataFrames containing the data read from the CSV files.
-    '''
-    dataframes = []
-    with open(text_file_path, 'r') as file:
-        csv_filenames = file.read().splitlines()
-    csv_filenames = csv_filenames[skip_positions:]
-    if num_dataframes is not None:
-        csv_filenames = csv_filenames[:num_dataframes]
-    for csv_filename in csv_filenames:
-        csv_file_path = os.path.join(os.path.dirname(text_file_path), csv_filename)
-        if csv_filename.endswith('.gz'):
-            df = pd.read_csv(csv_file_path, compression='gzip')
-        else:
-            df = pd.read_csv(csv_file_path)
-        dataframes.append(df)
-    
-    if shuffle:
-        random.seed(seed)
-        random.shuffle(dataframes)
-    return dataframes
-
-
-
-def read_all(text_file_path, num_dataframes=None, skip_positions=0, shuffle = True, seed = 42):
-    '''
-    Reads data from multiple CSV files along with associated numpy array files (npy) and returns as pandas DataFrames.
-    Supports .csv files compressed as .gz files and .npy files compressed as .gz files.
-
-    Parameters:
-    - text_file_path: Path to the text file containing a list of CSV filenames.
-    - num_dataframes: Number of CSV files to read. If None, reads all files. Default is None.
-    - skip_positions: Number of CSV filenames to skip from the beginning of the list. Default is 0.
-    - shuffle (bool, optional): if list reperesenting the games should be shuffled
-    - seed (int, optional): seed for shuffling, default 42
-
-    Returns:
-    - dataframes: A list of pandas DataFrames containing the data read from the CSV files along with associated numpy arrays.
-    '''
-    dataframes = []
-    with open(text_file_path, 'r') as file:
-        csv_filenames = file.read().splitlines()
-    csv_filenames = csv_filenames[skip_positions:]
-    if num_dataframes is not None:
-        csv_filenames = csv_filenames[:num_dataframes]
-    for csv_filename in csv_filenames:
-        csv_file_path = os.path.join(os.path.dirname(text_file_path), csv_filename)
-        if csv_filename.endswith('.gz'):
-            df = pd.read_csv(csv_file_path, compression='gzip')
-        else:
-            df = pd.read_csv(csv_file_path)
-        for column_name in df.columns:
-            if 'move' in column_name:
-                for index, row in df.iterrows():
-                    npy_file_path = os.path.join(os.path.dirname(csv_file_path), row[column_name])
-                    if npy_file_path.endswith('.gz'):
-                        with gzip.open(npy_file_path, 'rb') as f:
-                            numpy_array = np.load(f)
-                    else:
-                        numpy_array = np.load(npy_file_path)
-                    df.at[index, column_name] = numpy_array
-        dataframes.append(df)
-    if shuffle:
-        random.seed(seed)
-        random.shuffle(dataframes)
-    return dataframes
 
 def initialize_data(data, depths, columns_data):
     '''
@@ -921,6 +827,13 @@ def greedy_read(directory_path, file_name, verbose = True, str_functions = [str_
     return data
 
 def read(data_file, column_names_file):
+    '''
+    Function to read all the data from an npy file.
+    Requires the file to be saved using save_data() function.
+    Parameters:
+     - data_file (str) - path to file to read the saved data, requires an .npy file compressed to .gz
+     - column_names_file - path to file with columns in a form of .txt file
+    '''
     with gzip.open(data_file, 'rb') as f:
         data = np.load(f, allow_pickle=True)
     with open(column_names_file, 'r') as file:
