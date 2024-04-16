@@ -8,6 +8,25 @@ import pandas as pd
 import chess.engine
 import random
 import gzip
+import time
+
+times = {"human_move": 0,
+         "random_move": 0,
+         "initalization": 0,
+         "stockfish": 0,
+         "bitboards": 0,
+         "rest": 0,
+         "closing": 0,
+         "shuffling": 0}
+
+num_calls = {"human_move": 0,
+         "random_move": 0,
+         "initalization": 0,
+         "stockfish": 0,
+         "bitboards": 0,
+         "rest": 0,
+         "closing": 0,
+         "shuffling": 0}
 
 
 def str_to_bitboard_all_pieces(str_notation):
@@ -232,6 +251,7 @@ def get_bitboards(str_board, board, str_functions, board_functions):
     - complete_board: A 3D numpy array containing all generated bitboards.
     Each 2D slice corresponds to a single bitboard representing a specific aspect of the board.
     '''
+    start_time = time.time()
     complete_board = []
     boards = []
     for func in str_functions:
@@ -248,6 +268,11 @@ def get_bitboards(str_board, board, str_functions, board_functions):
                 complete_board.append(sub_board)
         else:
             complete_board.append(bit_board)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    global times, num_calls
+    times["bitboards"] += elapsed_time
+    num_calls["bitboards"] += 1
     return np.array(complete_board)
 
 def set_scores(board, engine, depths, time_limits, color, mate_score, data):
@@ -256,10 +281,16 @@ def set_scores(board, engine, depths, time_limits, color, mate_score, data):
         Requires data dictionary to expect key in format stockfish_score_depth_{depth}
         for every depth in provided list.
         '''
+        start_time = time.time()
         for i, depth in enumerate(depths):
             info = engine.analyse(board, chess.engine.Limit(depth=depth, time=time_limits[i]))
             score = info['score'].pov(color=color).score(mate_score=mate_score)
             data[f"stockfish_score_depth_{depth}"].append(score)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        global times, num_calls
+        times["stockfish"] += elapsed_time
+        num_calls["stockfish"] += 1
 
 def compress_file(filename):
     '''
@@ -366,6 +397,7 @@ def get_save_random_move(board, node, str_functions, board_functions, board_queu
     - file_path_queue (deque): Updated queue containing file paths.
     - board: Updated chess board object.
     '''
+    start_time = time.time()
     legal_moves = list(board.legal_moves)
     bot_move = random.choice(legal_moves)
     bot_clock = node.clock()
@@ -392,6 +424,11 @@ def get_save_random_move(board, node, str_functions, board_functions, board_queu
         data["elo"].append(black_elo)
         set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data)
     board.pop()
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    global times, num_calls
+    times["random_move"] += elapsed_time
+    num_calls["random_move"] += 1
     return data, board_queue, board 
 
 def get_save_human_move(board, node, str_functions, board_functions, board_qeue, data, player_color, engine, depths, time_limits, game, white_player, white_elo, black_player, black_elo):
@@ -423,6 +460,7 @@ def get_save_human_move(board, node, str_functions, board_functions, board_qeue,
     - filename (str): Path to the saved file.
     - board: Updated chess board object.
     '''
+    start_time = time.time()
     move = node.move
     clock = node.clock()
     board.push(move)
@@ -436,7 +474,13 @@ def get_save_human_move(board, node, str_functions, board_functions, board_qeue,
     board_qeue.append(new_board)
 
     data["human"].append(True)
+    start2 = time.time()
     data["event"].append(game.headers["Event"])
+    end2 = time.time()
+    global times, num_calls
+    times["rest"] += (end2 - start2)
+    num_calls["rest"] += 1
+
     data["clock"].append(clock)
     if player_color == chess.WHITE:
         data["player"].append(white_player)
@@ -448,6 +492,10 @@ def get_save_human_move(board, node, str_functions, board_functions, board_qeue,
         data["color"].append("Black")
         data["elo"].append(black_elo)
         set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    times["human_move"] += elapsed_time
+    num_calls["human_move"] += 1
     return data, board_qeue, board
 
 def save_game_data(engine, depths, time_limits, game_number, game, str_functions, board_functions,
@@ -471,27 +519,44 @@ def save_game_data(engine, depths, time_limits, game_number, game, str_functions
     - shuffle (bool, optional): If the datframe should be shuffled before being returned, default True
     - seed (int, optional): seed for shuffling, default 42
     '''
-
+    start_time = time.time()
     data = {}
     data = initialize_data(data, depths, columns_data)
     j=0
     board_queue = get_initial_boards(columns_data)
     data, board, white_player, white_elo, black_player, black_elo, board_queue = get_initial_game_state(data, board_queue, game, engine,
                                                                                                         depths, time_limits, str_functions, board_functions, columns_data)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    global times, num_calls
+    times["initalization"] += elapsed_time
+    num_calls["initalization"] += 1
+    
     for node in game.mainline():
         j+=1
         player_color = board.turn
         data, board_queue, board = get_save_random_move(board, node, str_functions, board_functions, board_queue, data, player_color, engine, depths, time_limits, game, white_elo, black_elo)
         data, board_queue, board = get_save_human_move(board, node, str_functions, board_functions, board_queue, data, player_color, engine, depths, time_limits, game, white_player, white_elo, black_player, black_elo)
+    
+    start_time_2 = time.time()
     df = pd.DataFrame(data)
     all_games_df = pd.concat([all_games_df, df], axis=0)
     all_games_df.reset_index(drop=True, inplace=True)
+    end_time_2 = time.time()
+    elapsed_time = end_time_2 - start_time_2
+    times["closing"] += elapsed_time
+    num_calls["closing"] += 1
     if game_number+1 == max_games or (game_number>0 and game_number%batch_size == 0):
+        start3 = time.time()
         if shuffle:
             all_games_df = all_games_df.sample(frac=1, random_state=seed).reset_index(drop=True)
         game_filename = f"{directory}\\game_batch_{game_number//batch_size}.npy"
         np.save(game_filename, all_games_df.to_numpy())
         compress_file(game_filename)
+        end_3 = time.time()
+        elapsed_time = end_3 - start3
+        times["shuffling"] += elapsed_time
+        num_calls["shuffling"] += 1
     return all_games_df
 
 def save_column_names(file_path, columns):
@@ -500,7 +565,7 @@ def save_column_names(file_path, columns):
 
 def save_data(txt_file_dir, directory_path, file_name, verbose = True, str_functions = [str_to_board_all_figures_colors], board_functions = [get_all_attacks], 
               stockfish_path = "D:\PikeBot\stockfish\stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], 
-              time_limits = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01], max_num_games = np.inf,
+              time_limits = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001], max_num_games = np.inf,
               columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True},
               shuffle = True, seed = 42, batch_size = 10000): #Double check time limits later
     '''
@@ -546,13 +611,17 @@ def save_data(txt_file_dir, directory_path, file_name, verbose = True, str_funct
         pgn_game = chess.pgn.read_game(pgn_io)
         if pgn_game is None or i >= max_num_games:
             break
-
         all_games_df = save_game_data(engine, depths, time_limits, i, pgn_game, str_functions, board_functions, directory = txt_file_dir, 
                                       columns_data = columns_data, shuffle = shuffle, seed = seed, batch_size = batch_size, max_games=max_num_games, 
                                       all_games_df=all_games_df)
         i+=1
     if verbose:
         print(f"Num processed games in a file = {i}")
+        global times, num_calls
+        print(f"Processing times: {times}")
+        for key in times.keys():
+            times[key] = times[key]/num_calls[key]
+        print(f"Relative speed: {times}")
 
 def initialize_data(data, depths, columns_data):
     '''
