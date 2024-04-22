@@ -484,7 +484,10 @@ def save_game_data(engine, depths, time_limits, game_number, game, str_functions
         data, board_queue, board = get_save_random_move(board, node, str_functions, board_functions, board_queue, data, player_color, engine, depths, time_limits, game, white_elo, black_elo)
         data, board_queue, board = get_save_human_move(board, node, str_functions, board_functions, board_queue, data, player_color, engine, depths, time_limits, game, white_player, white_elo, black_player, black_elo)
     df = pd.DataFrame(data)
-    all_games_df = pd.concat([all_games_df, df], axis=0)
+    if all_games_df.empty:
+        all_games_df = df.copy()
+    else:
+        all_games_df = pd.concat([all_games_df, df], axis=0)
     all_games_df.reset_index(drop=True, inplace=True)
     if game_number+1 == max_games or (game_number>0 and game_number%batch_size == 0):
         if shuffle:
@@ -500,7 +503,7 @@ def save_column_names(file_path, columns):
 
 def save_data(txt_file_dir, directory_path, file_name, verbose = True, str_functions = [str_to_board_all_figures_colors], board_functions = [get_all_attacks], 
               stockfish_path = "D:\PikeBot\stockfish\stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], 
-              time_limits = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01], max_num_games = np.inf,
+              time_limits = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001], max_num_games = np.inf,
               columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True},
               shuffle = True, seed = 42, batch_size = 10000): #Double check time limits later
     '''
@@ -534,23 +537,28 @@ def save_data(txt_file_dir, directory_path, file_name, verbose = True, str_funct
        'past_move_6', 'past_move_7', 'past_move_8', 'past_move_9',
        'past_move_10', 'past_move_11', 'past_move_12', 'current_move']
     all_games_df = pd.DataFrame(columns=columns)
+    save_column_names(txt_file_dir + "\\column_names.txt", columns=columns)
+    done = False
+    i = 0
     with open(file_path, "rb") as compressed_file:
         dctx = zstandard.ZstdDecompressor()
         with dctx.stream_reader(compressed_file) as decompressed_file:
-            pgn_text = decompressed_file.read().decode("utf-8")
+            while not done:
+                chunk = decompressed_file.read(1024**3) #Read one GB at a time
+                if not chunk:
+                    break
+                pgn_text = chunk.decode("utf-8")
+                pgn_io = io.StringIO(pgn_text)
+                while True:
+                    pgn_game = chess.pgn.read_game(pgn_io)
+                    if pgn_game is None or i >= max_num_games:
+                        done = True
+                        break
 
-    pgn_io = io.StringIO(pgn_text)
-    i = 0
-    save_column_names(txt_file_dir + "\\column_names.txt", columns=columns)
-    while True:
-        pgn_game = chess.pgn.read_game(pgn_io)
-        if pgn_game is None or i >= max_num_games:
-            break
-
-        all_games_df = save_game_data(engine, depths, time_limits, i, pgn_game, str_functions, board_functions, directory = txt_file_dir, 
-                                      columns_data = columns_data, shuffle = shuffle, seed = seed, batch_size = batch_size, max_games=max_num_games, 
-                                      all_games_df=all_games_df)
-        i+=1
+                    all_games_df = save_game_data(engine, depths, time_limits, i, pgn_game, str_functions, board_functions, directory = txt_file_dir, 
+                                                columns_data = columns_data, shuffle = shuffle, seed = seed, batch_size = batch_size, max_games=max_num_games, 
+                                                all_games_df=all_games_df)
+                    i+=1
     if verbose:
         print(f"Num processed games in a file = {i}")
 
@@ -771,7 +779,7 @@ def greedy_save_game(engine, depths, time_limits, game, str_functions, board_fun
 
 def greedy_read(directory_path, file_name, verbose = True, str_functions = [str_to_board_all_figures_colors], board_functions = [get_all_attacks], 
                 stockfish_path = "D:\PikeBot\stockfish\stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], 
-                time_limits = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01], starting_game = 0, num_games = np.inf,
+                time_limits = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001], starting_game = 0, num_games = np.inf,
                 columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True},
                 shuffle_df = True, shuffle_list = True, list_seed = 42):
     '''
