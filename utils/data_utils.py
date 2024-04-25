@@ -260,6 +260,10 @@ def set_scores(board, engine, depths, time_limits, color, mate_score, data):
             info = engine.analyse(board, chess.engine.Limit(depth=depth, time=time_limits[i]))
             score = info['score'].pov(color=color).score(mate_score=mate_score)
             data[f"stockfish_score_depth_{depth}"].append(score)
+            if len(data[f"stockfish_score_depth_{depth}"]) >= 3:
+                data[f"stockfish_difference_depth_{depth}"].append(data[f"stockfish_score_depth_{depth}"][-1]+data[f"stockfish_score_depth_{depth}"][-3])
+            else:
+                data[f"stockfish_difference_depth_{depth}"].append(data[f"stockfish_score_depth_{depth}"][-1])
 
 def compress_file(filename):
     '''
@@ -324,6 +328,7 @@ def get_initial_game_state(data, board_queue, game, engine, depths, time_limits,
     for _ in range(columns_data["num_past_moves"]):
         board_queue.append(empty_board)
     data["current_move"].append(new_board)
+    data["current_move_str"].append(str_board)
     data["event"].append(game.headers["Event"])
     clock = None
     for node in game.mainline():
@@ -378,6 +383,7 @@ def get_save_random_move(board, node, str_functions, board_functions, board_queu
         x+=1
     bot_new_board = get_bitboards(bot_str_board, board, str_functions, board_functions)
     data["current_move"].append(bot_new_board)
+    data["current_move_str"].append(bot_str_board)
 
     data["human"].append(False)
     data["event"].append(game.headers["Event"])
@@ -434,6 +440,7 @@ def get_save_human_move(board, node, str_functions, board_functions, board_qeue,
         x+=1
     new_board = get_bitboards(str_board, board, str_functions, board_functions)
     data["current_move"].append(new_board)
+    data["current_move_str"].append(str_board)
     board_qeue.append(new_board)
 
     data["human"].append(True)
@@ -452,7 +459,7 @@ def get_save_human_move(board, node, str_functions, board_functions, board_qeue,
     return data, board_qeue, board
 
 def save_game_data(engine, depths, time_limits, game_number, game, str_functions, board_functions,
-                    directory = "D:\\PikeBot\\New_Processed_Data", columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True},
+                    directory = "D:\\PikeBot\\New_Processed_Data", columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True, "current_move_str": True},
                     shuffle = True, seed = 42, batch_size = 10000, all_games_df = None, max_games = np.inf):
     '''
     Read and transform data from PGN game format to a DataFrame with appropriate information, and save it to a compressed CSV file.
@@ -505,7 +512,7 @@ def save_column_names(file_path, columns):
 def save_data(txt_file_dir, directory_path, file_name, verbose = True, str_functions = [str_to_board_all_figures_colors], board_functions = [get_all_attacks], 
               stockfish_path = "D:\PikeBot\stockfish\stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], 
               time_limits = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001], max_num_games = np.inf,
-              columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True},
+              columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True, "current_move_str": True},
               shuffle = True, seed = 42, batch_size = 10000): #Double check time limits later
     '''
     Saves data extracted from PGN games into CSV files. Uses .gz compression to minimize file size.
@@ -528,15 +535,22 @@ def save_data(txt_file_dir, directory_path, file_name, verbose = True, str_funct
     engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
     file_path = os.path.join(directory_path, file_name)
     columns = ['human', 'player', 'elo', 'color', 'event', 'clock',
-       'stockfish_score_depth_1', 'stockfish_score_depth_2',
-       'stockfish_score_depth_3', 'stockfish_score_depth_4',
-       'stockfish_score_depth_5', 'stockfish_score_depth_8',
-       'stockfish_score_depth_10', 'stockfish_score_depth_12',
-       'stockfish_score_depth_15', 'stockfish_score_depth_16',
-       'stockfish_score_depth_18', 'stockfish_score_depth_20', 'past_move_1',
-       'past_move_2', 'past_move_3', 'past_move_4', 'past_move_5',
+       'stockfish_score_depth_1', 'stockfish_difference_depth_1',
+       'stockfish_score_depth_2', 'stockfish_difference_depth_2',
+       'stockfish_score_depth_3', 'stockfish_difference_depth_3',
+       'stockfish_score_depth_4', 'stockfish_difference_depth_4',
+       'stockfish_score_depth_5',  'stockfish_difference_depth_5',
+       'stockfish_score_depth_8', 'stockfish_difference_depth_8',
+       'stockfish_score_depth_10', 'stockfish_difference_depth_10',
+       'stockfish_score_depth_12', 'stockfish_difference_depth_12',
+       'stockfish_score_depth_15', 'stockfish_difference_depth_15',
+       'stockfish_score_depth_16', 'stockfish_difference_depth_16',
+       'stockfish_score_depth_18', 'stockfish_difference_depth_18',
+       'stockfish_score_depth_20', 'stockfish_difference_depth_20',
+       'past_move_1', 'past_move_2', 'past_move_3', 'past_move_4', 'past_move_5',
        'past_move_6', 'past_move_7', 'past_move_8', 'past_move_9',
-       'past_move_10', 'past_move_11', 'past_move_12', 'current_move']
+       'past_move_10', 'past_move_11', 'past_move_12', 'current_move',
+       'current_move_str']
     all_games_df = pd.DataFrame(columns=columns)
     save_column_names(txt_file_dir + "\\column_names.txt", columns=columns)
     done = False
@@ -583,6 +597,7 @@ def initialize_data(data, depths, columns_data):
             else:
                 for depth in depths:
                     data[f"stockfish_score_depth_{depth}"] = []
+                    data[f"stockfish_difference_depth_{depth}"] = []
         elif arg == "num_past_moves":
             for i in range(columns_data[arg]):
                 data[f"past_move_{i+1}"] = []
