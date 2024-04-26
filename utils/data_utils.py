@@ -330,7 +330,7 @@ def get_initial_game_state(data, board_queue, game, engine, depths, time_limits,
     data["current_move"].append(new_board)
     data["current_move_str"].append(str_board)
     data["event"].append(game.headers["Event"])
-    clock = None
+    clock = 0.0 #Adding 0.0 in case the game is bugged and there is no clock
     for node in game.mainline():
         clock = node.clock()
         break
