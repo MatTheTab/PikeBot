@@ -459,7 +459,7 @@ def get_save_human_move(board, node, str_functions, board_functions, board_qeue,
     return data, board_qeue, board
 
 def save_game_data(engine, depths, time_limits, game_number, game, str_functions, board_functions,
-                    directory = "D:\\PikeBot\\New_Processed_Data", columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True, "current_move_str": True},
+                    directory = "./New_Processed_Data", columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True, "current_move_str": True},
                     shuffle = True, seed = 42, batch_size = 10000, all_games_df = None, max_games = np.inf):
     '''
     Read and transform data from PGN game format to a DataFrame with appropriate information, and save it to a compressed CSV file.
@@ -510,7 +510,7 @@ def save_column_names(file_path, columns):
         file.write('\n'.join(columns))
 
 def save_data(txt_file_dir, directory_path, file_name, verbose = True, str_functions = [str_to_board_all_figures_colors], board_functions = [get_all_attacks], 
-              stockfish_path = "D:\PikeBot\stockfish\stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], 
+              stockfish_path = "./stockfish\stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], 
               time_limits = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001], max_num_games = np.inf,
               columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True, "current_move_str": True},
               shuffle = True, seed = 42, batch_size = 10000): #Double check time limits later
@@ -794,7 +794,7 @@ def greedy_save_game(engine, depths, time_limits, game, str_functions, board_fun
     return df
 
 def greedy_read(directory_path, file_name, verbose = True, str_functions = [str_to_board_all_figures_colors], board_functions = [get_all_attacks], 
-                stockfish_path = "D:\PikeBot\stockfish\stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], 
+                stockfish_path = "./stockfish\stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], 
                 time_limits = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001], starting_game = 0, num_games = np.inf,
                 columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True},
                 shuffle_df = True, shuffle_list = True, list_seed = 42):
