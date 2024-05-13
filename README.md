@@ -49,8 +49,10 @@ Default dataframe columns explanation:
 | elo    | player's ELO score   | integer value, e.g. 1397    |
 | color    | color of the player    | "White" or "Black"   |
 | event    | event of the game    |  Event as defined in Lichess, e.g. Rated Classical game   |
-| clock    | how much time is left in the game (currently bugged)    | Currently None -> up for debugging    |
+| clock    | how much time is left in the game    | floating point number representing time left in a game, e.g. 64.0    |
 | stockfish_score_depth_{depth}    | score for a currently playing player judged using stockfish of chosen depth in {depth}    | Stockfish score as int, e.g. 744    |
+| stockfish_difference_depth_{move_num}    | difference between last human-made position as evaluated by stockfish and the position after making a move, i.e. how advantageous/disadvantageous a move was    |  Stockfish score as int, e.g. 744   |
 | past_move_{move_num}    | past move saved as bitboard to provide context for the model    | bitboard representing board state from past turns, shaped (76, 8, 8)    |
 | current_move    | currently performed move, expected input to the model along with optional context from previous columns    | bitboard representing board state after the current human/bot move, shaped (76, 8, 8)    |
+| current_move_str    | Forsyth–Edwards Notation (FEN) representation of the current board state    | String representing the board state (example shortened here) - , e.g. r2q1rk1/...    |
 
