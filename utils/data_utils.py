@@ -250,7 +250,7 @@ def get_bitboards(str_board, board, str_functions, board_functions):
             complete_board.append(bit_board)
     return np.array(complete_board)
 
-def set_scores(board, engine, depths, time_limits, color, mate_score, data):
+def set_scores(board, engine, depths, time_limits, color, mate_score, data, is_human):
         '''
         Set stockfish scores for chosen depths and time limits.
         Requires data dictionary to expect key in format stockfish_score_depth_{depth}
@@ -260,8 +260,11 @@ def set_scores(board, engine, depths, time_limits, color, mate_score, data):
             info = engine.analyse(board, chess.engine.Limit(depth=depth, time=time_limits[i]))
             score = info['score'].pov(color=color).score(mate_score=mate_score)
             data[f"stockfish_score_depth_{depth}"].append(score)
-            if len(data[f"stockfish_score_depth_{depth}"]) >= 3:
-                data[f"stockfish_difference_depth_{depth}"].append(data[f"stockfish_score_depth_{depth}"][-1]+data[f"stockfish_score_depth_{depth}"][-3])
+            if len(data[f"stockfish_score_depth_{depth}"]) > 3:
+                if is_human:
+                    data[f"stockfish_difference_depth_{depth}"].append(data[f"stockfish_score_depth_{depth}"][-1]+data[f"stockfish_score_depth_{depth}"][-3])
+                else:
+                    data[f"stockfish_difference_depth_{depth}"].append(data[f"stockfish_score_depth_{depth}"][-1]+data[f"stockfish_score_depth_{depth}"][-2])
             else:
                 data[f"stockfish_difference_depth_{depth}"].append(data[f"stockfish_score_depth_{depth}"][-1])
 
@@ -321,7 +324,7 @@ def get_initial_game_state(data, board_queue, game, engine, depths, time_limits,
     white_elo = game.headers["WhiteElo"]
     black_elo = game.headers["BlackElo"]
     board = game.board()
-    set_scores(board, engine, depths, time_limits, color=chess.WHITE, mate_score=900, data=data)
+    set_scores(board, engine, depths, time_limits, color=chess.WHITE, mate_score=900, data=data, is_human=True)
     str_board = board.fen()
     new_board = get_bitboards(str_board, board, str_functions, board_functions)
     empty_board = np.zeros_like(new_board)
@@ -392,12 +395,12 @@ def get_save_random_move(board, node, str_functions, board_functions, board_queu
         data["player"].append("bot")
         data["color"].append("White")
         data["elo"].append(white_elo)
-        set_scores(board, engine, depths, time_limits, color=chess.WHITE, mate_score=900, data=data)
+        set_scores(board, engine, depths, time_limits, color=chess.WHITE, mate_score=900, data=data, is_human = False)
     else:
         data["player"].append("bot")
         data["color"].append("Black")
         data["elo"].append(black_elo)
-        set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data)
+        set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data, is_human = False)
     board.pop()
     return data, board_queue, board 
 
@@ -450,17 +453,17 @@ def get_save_human_move(board, node, str_functions, board_functions, board_qeue,
         data["player"].append(white_player)
         data["color"].append("White")
         data["elo"].append(white_elo)
-        set_scores(board, engine, depths, time_limits, color=chess.WHITE, mate_score=900, data=data)
+        set_scores(board, engine, depths, time_limits, color=chess.WHITE, mate_score=900, data=data, is_human = True)
     else:
         data["player"].append(black_player)
         data["color"].append("Black")
         data["elo"].append(black_elo)
-        set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data)
+        set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data, is_human = True)
     return data, board_qeue, board
 
-def save_game_data(engine, depths, time_limits, game_number, game, str_functions, board_functions,
-                    directory = "./New_Processed_Data", columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True, "current_move_str": True},
-                    shuffle = True, seed = 42, batch_size = 10000, all_games_df = None, max_games = np.inf):
+def save_game_data(columns, engine, depths, time_limits, game_number, game, str_functions, board_functions,
+                    directory = "./stockfish\stockfish-windows-x86-64-avx2.exe", columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True, "current_move_str": True},
+                    shuffle = True, seed = 42, batch_size = 1000, all_games_df = None, max_games = np.inf):
     '''
     Read and transform data from PGN game format to a DataFrame with appropriate information, and save it to a compressed CSV file.
 
@@ -474,7 +477,7 @@ def save_game_data(engine, depths, time_limits, game_number, game, str_functions
     - game: The chess game object.
     - str_functions: A list of functions that convert string notation to bitboards.
     - board_functions: A list of functions that generate bitboards from chess.Board objects.
-    - directory (str, optional): Directory path where the data will be saved. Defaults to "D:\\PikeBot\\New_Processed_Data".
+    - directory (str, optional): Directory path where the data will be saved. Defaults to "./stockfish\stockfish-windows-x86-64-avx2.exe".
     - columns_data (dict, optional): Dictionary defining the columns of the DataFrame. Defaults to {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True}.
     - shuffle (bool, optional): If the datframe should be shuffled before being returned, default True
     - seed (int, optional): seed for shuffling, default 42
@@ -497,12 +500,14 @@ def save_game_data(engine, depths, time_limits, game_number, game, str_functions
     else:
         all_games_df = pd.concat([all_games_df, df], axis=0)
     all_games_df.reset_index(drop=True, inplace=True)
-    if game_number+1 == max_games or (game_number>0 and game_number%batch_size == 0):
+    if game_number+1 == max_games or (game_number>0 and (game_number+1)%batch_size == 0):
         if shuffle:
             all_games_df = all_games_df.sample(frac=1, random_state=seed).reset_index(drop=True)
         game_filename = f"{directory}\\game_batch_{game_number//batch_size}.npy"
         np.save(game_filename, all_games_df.to_numpy())
         compress_file(game_filename)
+        all_games_df = None
+        all_games_df = pd.DataFrame(columns=columns)
     return all_games_df
 
 def save_column_names(file_path, columns):
@@ -513,7 +518,7 @@ def save_data(txt_file_dir, directory_path, file_name, verbose = True, str_funct
               stockfish_path = "./stockfish\stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], 
               time_limits = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001], max_num_games = np.inf,
               columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True, "current_move_str": True},
-              shuffle = True, seed = 42, batch_size = 10000): #Double check time limits later
+              shuffle = True, seed = 42, batch_size = 1000):
     '''
     Saves data extracted from PGN games into CSV files. Uses .gz compression to minimize file size.
     
@@ -525,7 +530,7 @@ def save_data(txt_file_dir, directory_path, file_name, verbose = True, str_funct
     - verbose (bool, optional): If True, prints the number of processed games in the file. Defaults to True.
     - str_functions (list, optional): List of functions to convert board state to bitboard representation. Defaults to [str_to_board_all_figures_colors].
     - board_functions (list, optional): List of functions to apply on chess board to convert to bitboard notation. Defaults to [get_all_attacks].
-    - stockfish_path (str, optional): The path to the Stockfish chess engine executable. Defaults to "D:\PikeBot\stockfish\stockfish-windows-x86-64-avx2.exe".
+    - stockfish_path (str, optional): The path to the Stockfish chess engine executable. Defaults to "./stockfish\stockfish-windows-x86-64-avx2.exe".
     - depths (list, optional): List of depths for Stockfish engine analysis. Defaults to [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20].
     - time_limits (list, optional): List of time limits for Stockfish engine analysis. Defaults to [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]. Should be the same length as depths list.
     - max_num_games (int, optional): Number of games to read from the PGN file, by default np.infinite, i.e. all games will be read from the file.
@@ -561,16 +566,24 @@ def save_data(txt_file_dir, directory_path, file_name, verbose = True, str_funct
             while not done:
                 chunk = decompressed_file.read(1024**3) #Read one GB at a time
                 if not chunk:
+                    print("No more Chunks")
                     break
                 pgn_text = chunk.decode("utf-8")
                 pgn_io = io.StringIO(pgn_text)
                 while True:
                     pgn_game = chess.pgn.read_game(pgn_io)
-                    if pgn_game is None or i >= max_num_games:
+                    if i >= max_num_games:
                         done = True
                         break
-
-                    all_games_df = save_game_data(engine, depths, time_limits, i, pgn_game, str_functions, board_functions, directory = txt_file_dir, 
+                    elif pgn_game is None:
+                        print("Chunk Done!")
+                        break
+                    try: #Checking if some game was only partially saved
+                        temp_var = pgn_game.headers["WhiteElo"]
+                        temp_var = pgn_game.headers["BlackElo"]
+                    except KeyError:
+                        continue
+                    all_games_df = save_game_data(columns, engine, depths, time_limits, i, pgn_game, str_functions, board_functions, directory = txt_file_dir, 
                                                 columns_data = columns_data, shuffle = shuffle, seed = seed, batch_size = batch_size, max_games=max_num_games, 
                                                 all_games_df=all_games_df)
                     i+=1
@@ -697,12 +710,12 @@ def get_random_move(game, player_color, data, engine, depths, time_limits, white
         data["player"].append("bot")
         data["color"].append("White")
         data["elo"].append(white_elo)
-        set_scores(board, engine, depths, time_limits, color=chess.WHITE, mate_score=900, data=data)
+        set_scores(board, engine, depths, time_limits, color=chess.WHITE, mate_score=900, data=data, is_human = False)
     else:
         data["player"].append("bot")
         data["color"].append("Black")
         data["elo"].append(black_elo)
-        set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data)
+        set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data, is_human = False)
     board.pop()
     return data, file_path_queue, board
 
@@ -750,12 +763,12 @@ def get_human_move(game, player_color, data, engine, depths, time_limits, white_
         data["player"].append(white_player)
         data["color"].append("White")
         data["elo"].append(white_elo)
-        set_scores(board, engine, depths, time_limits, color=chess.WHITE, mate_score=900, data=data)
+        set_scores(board, engine, depths, time_limits, color=chess.WHITE, mate_score=900, data=data, is_human = True)
     else:
         data["player"].append(black_player)
         data["color"].append("Black")
         data["elo"].append(black_elo)
-        set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data)
+        set_scores(board, engine, depths, time_limits, color=chess.BLACK, mate_score=900, data=data, is_human = True)
     return data, file_path_queue, board
 
 def greedy_save_game(engine, depths, time_limits, game, str_functions, board_functions, columns_data, shuffle = True, seed = 42):
@@ -780,7 +793,7 @@ def greedy_save_game(engine, depths, time_limits, game, str_functions, board_fun
     data = initialize_data(data, depths, columns_data)
     j=0
     board = game.board()
-    set_scores(board, engine, depths, time_limits, color=chess.WHITE, mate_score=900, data=data)
+    set_scores(board, engine, depths, time_limits, color=chess.WHITE, mate_score=900, data=data, is_human = True)
     data, file_path_queue, white_player, white_elo, black_player, black_elo = initalize_starting_moves(data, columns_data, game, board, str_functions, board_functions)
     
     for node in game.mainline():
@@ -807,7 +820,7 @@ def greedy_read(directory_path, file_name, verbose = True, str_functions = [str_
     - verbose (bool, optional): If True, prints information during processing. Default is True.
     - str_functions (list, optional): List of functions to convert chess elements to strings. Default is [str_to_board_all_figures_colors].
     - board_functions (list, optional): List of functions to interact with the chess board. Default is [get_all_attacks].
-    - stockfish_path (str, optional): Path to the Stockfish engine executable. Default is "D:\PikeBot\stockfish\stockfish-windows-x86-64-avx2.exe".
+    - stockfish_path (str, optional): Path to the Stockfish engine executable. Default is "./stockfish\stockfish-windows-x86-64-avx2.exe".
     - depths (list, optional): List of depth values for engine search. Default is [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20].
     - time_limits (list, optional): List of time limits for the engine search. Default is [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01].
     - starting_game (int, optional): Index of the first game to process. Default is 0.
