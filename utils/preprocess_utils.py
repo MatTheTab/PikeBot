@@ -271,20 +271,19 @@ def preprocess(df, columns_to_change_types, new_types, columns_to_map, str_vals,
         df = df.drop(columns = columns_to_drop)
         return df, mins, maxs, means, stds
 
-def copy_columns_file(target_dir, source_dir, columns_file):
+def copy_columns_file(columns, target_directory, columns_file):
     '''
-        Copy file with column names to the target directory
-        Params:
-                - target_dir (str) - target directory for the copy operation
-                - source_dir (str) - source directory with file containing column names
-                - columns_file (str) - text file name containing column names
-        '''
-    source_file = f"{source_dir}\\{columns_file}"
-    with open(source_file, 'r') as file:
-        file_contents = file.read()
-    destination_file = f"{target_dir}\\{columns_file}"
-    with open(destination_file, 'w') as file:
-        file.write(file_contents)
+    Save column names to a file.
+
+    Params:
+            - columns (list): Column names to be saved
+            - target_directory (str): String representing the target directory to which the file should be saved
+            - columns_file (str): String showing the target name of the column names file
+    '''
+    target_file = f"{target_directory}\\{columns_file}"
+    with open(target_file, 'w') as f:
+        for column in columns:
+            f.write("%s\n" % column)
 
 def preprocess_all(save_name, target_directory, directory, columns_to_change_types, new_types, columns_to_map, str_vals, columns_to_one_hot, key_strings,
                columns_to_divide, divide_val, cols_to_normalize, cols_to_standardize, columns_to_drop):
@@ -320,7 +319,7 @@ def preprocess_all(save_name, target_directory, directory, columns_to_change_typ
         maxs_list = []
         means_list = []
         stds_list = []
-        copy_columns_file(target_directory, directory, "column_names.txt")
+        copied_columns = False
         for i in range(len(npy_gz_files)):
             file = npy_gz_files[i]
             df = read(data_file = f"{directory}\\{file}", column_names_file = f"{directory}\\column_names.txt")
@@ -331,6 +330,9 @@ def preprocess_all(save_name, target_directory, directory, columns_to_change_typ
             df, mins, maxes = batch_normalize(df, cols_to_normalize)
             df, means, stds = batch_standardize(df, cols_to_standardize)
             df = df.drop(columns=columns_to_drop)
+            if not copied_columns:
+                copy_columns_file(list(df.columns), target_directory, "column_names.txt")
+                copied_columns = True
             mins_list.append(mins)
             maxs_list.append(maxes)
             means_list.append(means)
