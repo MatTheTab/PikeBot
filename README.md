@@ -12,6 +12,7 @@ https://drive.google.com/drive/folders/1ZiqnOgf4XJErX2aGR9IvxpPPwCLDET2g?usp=sha
  - Data -> raw PGN data, needs to be converted to .npy files <br>
  - Preprocessed_Data -> data read from PGN files <br>
  - Model_Data -> Data which can be directly fed into the model, normalized/standardized and generally cleaned data from Preprocessed_Data <br>
+
 Project directory structure:
 ```
 Pikebot/
