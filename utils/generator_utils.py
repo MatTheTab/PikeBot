@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import tensorflow as tf
 from utils.data_utils import * 
+import copy
 import pickle
 
 def save_object(object, file_path):
@@ -29,6 +30,30 @@ def load_object(file_path):
         loaded_object = pickle.load(f)
     return loaded_object
 
+def efficent_load_object(file_path, chunk_size=1024**3):
+    '''
+    Loads a Python object from a pickle file in chunks.
+    
+    Parameters:
+        file_path: The file path from which the object will be loaded.
+        chunk_size: The size of each chunk (in bytes) to load.
+        
+    Returns:
+        The loaded Python object.
+    '''
+    loaded_object = None
+    with open(file_path, 'rb') as f:
+        while True:
+            try:
+                chunk = pickle.load(f)
+                if loaded_object is None:
+                    loaded_object = chunk
+                else:
+                    loaded_object.extend(chunk)
+            except EOFError:
+                break
+    return loaded_object
+
 class NPYSequence(tf.keras.utils.Sequence):
     '''
     Data generator class used for reading data dynamically from the specified directory for optimal performance.
@@ -48,6 +73,7 @@ class NPYSequence(tf.keras.utils.Sequence):
         self.batch_size = batch_size
         self.file_names = os.listdir(folder_path)
         self.file_names = [f for f in self.file_names if f.endswith('.npy.gz')]
+        self.filenames_copy = copy.deepcopy(self.file_names)
         self.total_samples = self.calculate_total_samples()
         self.current_data = None
         self.target_column = target_column
@@ -85,6 +111,8 @@ class NPYSequence(tf.keras.utils.Sequence):
         start_index = index * self.batch_size - self.current_index
         end_index = start_index + self.batch_size
         if self.current_data is None:
+            self.file_names = copy.deepcopy(self.filenames_copy)
+            self.load_next_file()
             return None, None
         batch_data = self.current_data.iloc[start_index:end_index]
  
