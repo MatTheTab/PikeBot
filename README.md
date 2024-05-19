@@ -38,6 +38,7 @@ Pikebot/
 │   ├── Test/
 │   └── Val/
 ├── stockfish/
+├── Generators/
 ├── utils/
 │   ├── data_utils
 │   └── chess_utils
