@@ -60,7 +60,6 @@ def evaluate(loader, model, loss_func, num_hanging_values, device, verbose, log,
             binary_preds = binary_preds.astype(np.int8)
             binary_expected = numpy_y_train.astype(np.int8)
             total_accuracy += np.sum(binary_preds == binary_expected)
-            break #TODO: delete later -> just for testing
     if verbose:
         print(f"Epoch {epoch} {name} Loss: {round(total_loss/total_examples, 4)} | MSE: {round(total_MSE/total_examples, 4)} | MAE: {round(total_MAE/total_examples, 4)}  | Accuracy: {round(total_accuracy/total_examples, 4)}")
     if log:
@@ -120,7 +119,6 @@ def train_epoch(loader, model, optimizer, loss_func, num_hanging_values, device,
         binary_preds = binary_preds.astype(np.int8)
         binary_expected = numpy_y_train.astype(np.int8)
         total_accuracy += np.sum(binary_preds == binary_expected)
-        break #TODO: delete later -> just for testing
     if verbose:
         print("______________________________________________________________")
         print(f"Epoch {epoch} Train Loss: {round(total_loss/total_examples, 4)} | MSE: {round(total_MSE/total_examples, 4)} | MAE: {round(total_MAE/total_examples, 4)} | Accuracy: {round(total_accuracy/total_examples, 4)}")
