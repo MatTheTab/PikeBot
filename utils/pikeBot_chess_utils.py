@@ -2,36 +2,36 @@ from utils.model_utils import *
 from utils.data_utils import *
 from utils.chess_utils import * 
 import chess
+import json
 
 class PikeBotModelWrapper:
-    def __init__(self, model_path):
+    def __init__(self, model_path, preprocessing_parameters_path):
         self.model = torch.load(model_path)
         self.model.eval()  
+
+        with open(preprocessing_parameters_path, 'r') as f:
+            parameters = json.load(f)
+
+        self.attributes_to_standardize = parameters["attributes_to_standardize"]
+        self.attributes_to_scale = parameters["attributes_to_scale"]
+        self.attributes_order = parameters["attributes_order"]
 
     def encode(self, board : chess.Board, attributes : dict):
         str_board = board.fen()
         bitboard = get_bitboards(str_board = str_board, board =  board, str_functions = [str_to_board_all_figures_colors], board_functions = [get_all_attacks])
         input_bitboard = torch.tensor(bitboard[np.newaxis, ...], dtype = torch.float32)
 
-        attributes_to_standardize = {'stockfish_score_depth_8' : (-140, 222),
-                                      'stockfish_difference_depth_8' : (-120, 375)}
-        
-        attributes_to_scale = {
-            'elo' : (0, 3000)
-        }
 
-        attributes_order = ['elo', 'color', 'stockfish_score_depth_8', 'stockfish_difference_depth_8']
-
-        for key in attributes_to_standardize.keys():
-            attributes[key] -= attributes_to_standardize[key][0]
-            attributes[key] /= attributes_to_standardize[key][1]
+        for key in self.attributes_to_standardize.keys():
+            attributes[key] -= self.attributes_to_standardize[key][0]
+            attributes[key] /= self.attributes_to_standardize[key][1]
 
 
-        for key in attributes_to_scale.keys():
-            attributes[key] -= attributes_to_scale[key][0]
-            attributes[key] /= attributes_to_scale[key][1]
+        for key in self.attributes_to_scale.keys():
+            attributes[key] -= self.attributes_to_scale[key][0]
+            attributes[key] /= self.attributes_to_scale[key][1]
             
-        attributes_to_fit = np.array([attributes[key] for key in attributes_order])
+        attributes_to_fit = np.array([attributes[key] for key in self.attributes_order])
         attributes_encoded = torch.tensor(attributes_to_fit[np.newaxis, ...], dtype = torch.float32)
         return (input_bitboard, attributes_encoded)
 

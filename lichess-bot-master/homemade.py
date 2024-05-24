@@ -7,7 +7,6 @@ With these classes, bot makers will not have to implement the UCI or XBoard inte
 from __future__ import annotations
 import chess
 from chess.engine import PlayResult, Limit
-import random
 from lib.config import Configuration
 from lib.engine_wrapper import COMMANDS_TYPE, OPTIONS_TYPE
 from lib.engine_wrapper import MinimalEngine, MOVE
@@ -53,13 +52,14 @@ class PikeBotEngine(ExampleEngine):
             else:
                 self.opponent_elo = game.black.rating
 
-            print(self.opponent_elo)
             with open('pikeBot-config.yaml') as config_file:
                 config = yaml.safe_load(config_file)
 
                 stockfish_path = config['stockfish_path']
+                model_path = config["model_path"]
+                preprocessing_parameters_path = config["preprocessing_parameters_path"]
 
-            model = PikeBotModelWrapper('..\Models\PikeBot_Models\PikeBot.pth')
+            model = PikeBotModelWrapper(model_path, preprocessing_parameters_path)
             self.chessBot = Pikebot( model=model, 
                                     aggregate=mean_aggr,
                                     stockfish_path=stockfish_path,
