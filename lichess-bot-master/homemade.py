@@ -70,4 +70,5 @@ class PikeBotEngine(ExampleEngine):
 
     def search(self, board: chess.Board, *args: Any) -> PlayResult:
         print(args)
+        print(self.chessBot.move_history)
         return PlayResult(self.chessBot.get_best_move(board), None)

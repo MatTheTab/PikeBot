@@ -1,0 +1,3 @@
+venv/
+lichess-bot-master/venv
+utils/__pycache__/
