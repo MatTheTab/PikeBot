@@ -1,0 +1,10 @@
+{
+    "attributes_to_standardize": {
+        "stockfish_score_depth_8": [-140, 222],
+        "stockfish_difference_depth_8": [-120, 375]
+    },
+    "attributes_to_scale": {
+        "elo": [0, 3000]
+    },
+    "attributes_order": ["elo", "color", "stockfish_score_depth_8", "stockfish_difference_depth_8"]
+}

@@ -7,12 +7,22 @@ With these classes, bot makers will not have to implement the UCI or XBoard inte
 from __future__ import annotations
 import chess
 from chess.engine import PlayResult, Limit
-import random
 from lib.config import Configuration
 from lib.engine_wrapper import COMMANDS_TYPE, OPTIONS_TYPE
 from lib.engine_wrapper import MinimalEngine, MOVE
 from typing import Any
 import logging
+from lib.model import Game
+
+import sys
+import os
+import yaml
+
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(parent_dir)
+
+from utils.chess_utils import ChessBot, Uniform_model, mean_aggr, max_aggr
+from utils.pikeBot_chess_utils import Pikebot, PikeBotModelWrapper
 
 
 
@@ -28,104 +38,37 @@ class ExampleEngine(MinimalEngine):
     pass
 
 
-# Bot names and ideas from tom7's excellent eloWorld video
-
-class RandomMove(ExampleEngine):
-    """Get a random move."""
-
-    def search(self, board: chess.Board, *args: Any) -> PlayResult:
-        """Choose a random move."""
-        return PlayResult(random.choice(list(board.legal_moves)), None)
-
-
-class Alphabetical(ExampleEngine):
-    """Get the first move when sorted by san representation."""
-
-    def search(self, board: chess.Board, *args: Any) -> PlayResult:
-        """Choose the first move alphabetically."""
-        moves = list(board.legal_moves)
-        moves.sort(key=board.san)
-        return PlayResult(moves[0], None)
-
-
-class FirstMove(ExampleEngine):
-    """Get the first move when sorted by uci representation."""
-
-    def search(self, board: chess.Board, *args: Any) -> PlayResult:
-        """Choose the first move alphabetically in uci representation."""
-        moves = list(board.legal_moves)
-        moves.sort(key=str)
-        return PlayResult(moves[0], None)
-
-
-class ComboEngine(ExampleEngine):
-    """
-    Get a move using multiple different methods.
-
-    This engine demonstrates how one can use `time_limit`, `draw_offered`, and `root_moves`.
-    """
-
-    def search(self, board: chess.Board, time_limit: Limit, ponder: bool, draw_offered: bool, root_moves: MOVE) -> PlayResult:
-        """
-        Choose a move using multiple different methods.
-
-        :param board: The current position.
-        :param time_limit: Conditions for how long the engine can search (e.g. we have 10 seconds and search up to depth 10).
-        :param ponder: Whether the engine can ponder after playing a move.
-        :param draw_offered: Whether the bot was offered a draw.
-        :param root_moves: If it is a list, the engine should only play a move that is in `root_moves`.
-        :return: The move to play.
-        """
-        if isinstance(time_limit.time, int):
-            my_time = time_limit.time
-            my_inc = 0
-        elif board.turn == chess.WHITE:
-            my_time = time_limit.white_clock if isinstance(time_limit.white_clock, int) else 0
-            my_inc = time_limit.white_inc if isinstance(time_limit.white_inc, int) else 0
-        else:
-            my_time = time_limit.black_clock if isinstance(time_limit.black_clock, int) else 0
-            my_inc = time_limit.black_inc if isinstance(time_limit.black_inc, int) else 0
-
-        possible_moves = root_moves if isinstance(root_moves, list) else list(board.legal_moves)
-
-        if my_time / 60 + my_inc > 10:
-            # Choose a random move.
-            move = random.choice(possible_moves)
-        else:
-            # Choose the first move alphabetically in uci representation.
-            possible_moves.sort(key=str)
-            move = possible_moves[0]
-        return PlayResult(move, None, draw_offered=draw_offered)
-    
     
 class PikeBotEngine(ExampleEngine):
     """Get a random move."""
 
-    def __init__(self, commands: list[str], options: dict[str, Any], stderr: int | None, draw_or_resign: Configuration, game: Any | None = None, name: str | None = None, **popen_args: str) -> None:
+    def __init__(self, commands: list[str], options: dict[str, Any], stderr: int | None, draw_or_resign: Configuration, game: Game | None = None, name: str | None = None, **popen_args: str) -> None:
         super().__init__(commands, options, stderr, draw_or_resign, game, name, **popen_args)
-
+        self.opponent_elo = 1500
 
         if game:
-            import sys
-            import os
-            import yaml
-
-            parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-            sys.path.append(parent_dir)
+            if game.opponent_color == "white":
+                self.opponent_elo = game.white.rating
+            else:
+                self.opponent_elo = game.black.rating
 
             with open('pikeBot-config.yaml') as config_file:
                 config = yaml.safe_load(config_file)
 
                 stockfish_path = config['stockfish_path']
+                model_path = config["model_path"]
+                preprocessing_parameters_path = config["preprocessing_parameters_path"]
 
-            from utils.chess_utils import ChessBot, Uniform_model, mean_aggr
-            self.chessBot = ChessBot( model=Uniform_model(model_path=None), 
+            model = PikeBotModelWrapper(model_path, preprocessing_parameters_path)
+            self.chessBot = Pikebot( model=model, 
                                     aggregate=mean_aggr,
                                     stockfish_path=stockfish_path,
-                                    color=game.my_color
+                                    color=game.my_color,
+                                    opponents_elo = self.opponent_elo
                                     )
             
 
     def search(self, board: chess.Board, *args: Any) -> PlayResult:
-        """Choose a random move."""
+        print(args)
+        print(self.chessBot.move_history)
         return PlayResult(self.chessBot.get_best_move(board), None)
