@@ -127,15 +127,15 @@ def train_epoch(loader, model, optimizer, loss_func, num_hanging_values, device,
             f.write(f"Epoch {epoch} Train Loss: {round(total_loss/total_examples, 4)} | MSE: {round(total_MSE/total_examples, 4)} | MAE: {round(total_MAE/total_examples, 4)} | Accuracy: {round(total_accuracy/total_examples, 4)}\n")
     return total_loss
 
-def train(train_loader, val_loader, test_loader, model, optimizer, loss_func, num_hanging_values, epochs, device, log = 1, log_file = "./Training_Logs\\Training.txt", verbose = 1, val = False, early_callback = False, early_callback_epochs = 100,
+def train(train_loader_path, val_loader_path, test_loader_path, model, optimizer, loss_func, num_hanging_values, epochs, device, log = 1, log_file = "./Training_Logs\\Training.txt", verbose = 1, val = False, early_callback = False, early_callback_epochs = 100,
           checkpoint = True, epochs_per_checkpoint = 4, break_after_checkpoint = True, checkpoint_filename = "./Models\\PikeBot_Models\\PikeBot_checkpoint.pth"):
     '''
     Trains a neural network model with optional checkpointing and early callback.
 
     Parameters:
-        train_loader (DataLoader/Generator): DataLoader for the training dataset.
-        val_loader (DataLoader/Generator): DataLoader for the validation dataset.
-        test_loader (DataLoader/Generator): DataLoader for the test dataset.
+        train_loader_path (str): Path for loading a data generator/loader saved as a pickle object for training.
+        val_loader_path (str): Path for loading a data generator/loader saved as a pickle object for evaluation.
+        test_loader_path (str): Path for loading a data generator/loader saved as a pickle object for testing.
         model (torch.nn.Module): The neural network model to be trained.
         optimizer (torch.optim.Optimizer): Optimizer used for training.
         loss_func (callable): Loss function used for training.
@@ -177,8 +177,10 @@ def train(train_loader, val_loader, test_loader, model, optimizer, loss_func, nu
             best_model = checkpoint['best_model']
 
     while epoch < epochs:
+        train_loader = efficent_load_object(train_loader_path)
         train_epoch(train_loader, model, optimizer, loss_func, num_hanging_values, device, verbose, log, log_file, epoch)
         if val:
+            val_loader = efficent_load_object(val_loader_path)
             val_loss = evaluate(val_loader, model, loss_func, num_hanging_values, device, verbose, log, log_file, epoch, name = "Val")
             if early_callback:
                 if val_loss <= best_val_loss:
@@ -215,6 +217,7 @@ def train(train_loader, val_loader, test_loader, model, optimizer, loss_func, nu
             if break_after_checkpoint:
                 break
 
+    test_loader = efficent_load_object(test_loader_path)
     test_loss = evaluate(test_loader, model, loss_func, num_hanging_values, device, verbose, log, log_file, epoch, name = "Test")
     return model
 
