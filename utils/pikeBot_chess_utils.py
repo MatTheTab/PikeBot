@@ -105,6 +105,21 @@ class Pikebot(ChessBot):
     - is_white (bool): true if the bot plays as white and the opponent plays as black, false otherwise
     '''
     def __init__(self, model, aggregate, stockfish_path, color="white", time_limit=0.001, engine_depth=8, name="PikeBot", opponents_elo=1500):
+        '''
+        Initializes the Pikebot object.
+
+        Parameters:
+        - model: The model used for board evaluation.
+        - aggregate (function): The function used for aggregating move predictions.
+        - stockfish_path (str): The path to the Stockfish executable.
+        - color (str, optional): The color of the bot, either "white" or "black". Defaults to "white".
+        - time_limit (float, optional): The time limit for move analysis. Defaults to 0.01.
+        - engine_depth (int, optional): The depth of search for the engine's analysis. Defaults to 20.
+        - name (str, optional): The name of the bot. Defaults to "ChessBot".
+        - move_history (list): The list of moves as a sequence of the positions throughout the game.
+        - opponents_elo (int): elo ranking of the opponent
+        - is_white (bool): true if the bot plays as white and the opponent plays as black, false otherwise
+        '''
         super().__init__(model, aggregate, stockfish_path, color, time_limit, engine_depth, name)
         self.move_history = list()
         self.evaluation_history = list()
@@ -146,7 +161,7 @@ class Pikebot(ChessBot):
                     'elo' : self.opponents_elo,
                     'color' : self.is_white,
                     'stockfish_score_depth_8' : score,
-                    'stockfish_difference_depth_8' : score - my_score
+                    'stockfish_difference_depth_8' : score + my_score
                     })
                 choice_prob = self.model.predict(board_state)
 
