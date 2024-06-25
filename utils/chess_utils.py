@@ -649,6 +649,21 @@ class ChessBot(Player):
         print(f"Aggregating Function: {self.aggregate}")
         print()
 
+    def get_board_score(self, board: chess.Board) -> int:
+        '''
+        Gives a rating of a provided position using stockfish with the preset depth and time limit.
+
+        Parameters
+        -board (chess.Board): current state of the chess board.
+
+        Returns:
+        -score (int): value of the stockfish evaluation for a given position.
+        '''
+        info = self.engine.analyse(board, chess.engine.Limit(depth=self.engine_depth, time=self.time_limit))
+        score = info['score'].pov(color=self.color).score(mate_score=900)
+
+        return score
+
     def get_best_move_verbose(self, board):
         '''
         Gets the best move considering verbose output.
@@ -669,13 +684,11 @@ class ChessBot(Player):
                 print()
                 print("Board: ")
                 print(board)
-                info = self.engine.analyse(board, chess.engine.Limit(depth=self.engine_depth, time=self.time_limit))
-                score = info['score'].pov(color=self.color).score(mate_score=900)
+                score = self.get_board_score(board)
                 board_state = self.model.encode(board)
                 choice_prob = self.model.predict(board_state)
                 print("Probability = ", choice_prob)
                 print("Score = ", score)
-                print("Info Score = ", info)
                 prediction_vars.append(tuple([move, next_move, choice_prob, score]))
                 board.pop()
             board.pop()
@@ -700,8 +713,7 @@ class ChessBot(Player):
             opponent_moves = list(board.legal_moves)
             for next_move in opponent_moves:
                 board.push(next_move)
-                info = self.engine.analyse(board, chess.engine.Limit(depth=self.engine_depth, time=self.time_limit))
-                score = info['score'].pov(color=self.color).score(mate_score=900)
+                score = self.get_best_move(board)
                 board_state = self.model.encode(board)
                 choice_prob = self.model.predict(board_state)
                 prediction_vars.append(tuple([move, next_move, choice_prob, score]))

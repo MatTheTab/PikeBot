@@ -147,15 +147,13 @@ class Pikebot(ChessBot):
         my_moves = list(board.legal_moves)
         for move in my_moves:
             board.push(move)
-            my_info = self.engine.analyse(board, chess.engine.Limit(depth=self.engine_depth, time=self.time_limit))
-            my_score = my_info['score'].pov(color=self.color).score(mate_score=900)
+            my_score = self.get_board_score(board)
             my_moves_scores.append(my_score)
 
             opponent_moves = list(board.legal_moves)
             for next_move in opponent_moves:
                 board.push(next_move)
-                info = self.engine.analyse(board, chess.engine.Limit(depth=self.engine_depth, time=self.time_limit))
-                score = info['score'].pov(color=self.color).score(mate_score=900)
+                score = self.get_board_score(board)
 
                 board_state = self.model.encode(board, {
                     'elo' : self.opponents_elo,
