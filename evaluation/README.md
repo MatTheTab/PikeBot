@@ -1,0 +1,1 @@
+For this evaluation to work you need to have the same set up for Pike Bot as in other cases and additional setup of Maia chess described in https://lczero.org/play/quickstart/.
