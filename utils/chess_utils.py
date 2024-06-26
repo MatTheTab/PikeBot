@@ -196,6 +196,19 @@ class Player:
         '''
         board.push(move)
 
+    def get_best_move(self, board):
+        '''
+        Get the best move for a given position according to players strategy.
+
+        Parameters:
+        - board (chess.Board): The current state of the chess board.
+
+        Returns:
+        - chess.Move: The best move calculated by the engine.
+        '''
+        return list(board.legal_moves)[0]
+
+
     def is_game_over(self, board):
         '''
         Check if the game is over.
@@ -335,7 +348,7 @@ class Human(Player):
                 print("Invalid move. Please enter a move in the format 'e2e4'.")
 
 
-def play_chess(white_player, black_player, mute=False):
+def play_chess(white_player: Player, black_player: Player, mute=False):
     '''
     Play a game of chess between two players.
 
