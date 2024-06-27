@@ -1,1 +1,2 @@
-For this evaluation to work you need to have the same set up for Pike Bot as in other cases and additional setup of Maia chess described in https://lczero.org/play/quickstart/.
+For this evaluation to work you need to have the same set up for Pike Bot as in other cases and additional setup of Maia chess described in https://lczero.org/play/quickstart/. 
+We also use here a list of openings from https://en.chessbase.com/post/test-your-engines-the-silver-openings-suite.

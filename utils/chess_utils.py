@@ -347,8 +347,23 @@ class Human(Player):
             except ValueError:
                 print("Invalid move. Please enter a move in the format 'e2e4'.")
 
+def get_board_result(board:chess.Board):
+    result = board.result()
+    if result == "1-0":
+        return 1
+    elif result == "0-1":
+        return -1
+    return 0
 
-def play_chess(white_player: Player, black_player: Player, mute=False):
+def print_result(result:int):
+    if result == 1:
+        print("\nWhite Wins!\n")
+    elif result == -1:
+        print("\nBlack Wins!\n")
+    print("\nIt's a tie!\n")
+
+
+def play_chess(white_player: Player, black_player: Player, mute:bool=False, board:chess.Board=None):
     '''
     Play a game of chess between two players.
 
@@ -362,10 +377,17 @@ def play_chess(white_player: Player, black_player: Player, mute=False):
     '''
     if not mute:
         print("Game Started!")
-    board = chess.Board()
-    while not board.is_game_over():
-        print()
+    if board is None:
+        board = chess.Board()
+
+    if board.is_game_over():
         if not mute:
+            print("\nGame already finished!\n")
+        return get_board_result(board)
+    
+    while not board.is_game_over():
+        if not mute:
+            print()
             white_player.display_board(board)
 
         white_move = white_player.get_best_move(board)
@@ -376,19 +398,10 @@ def play_chess(white_player: Player, black_player: Player, mute=False):
             black_player.display_board(board)
 
         if board.is_game_over():
-            result = board.result()
-            if result == "1-0":
-                if not mute:
-                    print("\nWhite Wins!\n")
-                return 1
-            elif result == "0-1":
-                if not mute:
-                    print("\nBlack Wins!\n")
-                return -1
-            else:
-                if not mute:
-                    print("\nIt's a tie!\n")
-                return 0
+            result = get_board_result(board)
+            if not mute:
+                print_result(result)
+            return result
             
         black_move = black_player.get_best_move(board)
         if not mute:
@@ -396,20 +409,10 @@ def play_chess(white_player: Player, black_player: Player, mute=False):
         black_player.play_move(black_move, board)
 
         if board.is_game_over():
-            result = board.result()
-            if result == "1-0":
-                if not mute:
-                    print("\nWhite Wins!\n")
-                return 1
-            elif result == "0-1":
-                if not mute:
-                    print("\nBlack Wins!\n")
-                return -1
-            else:
-                if not mute:
-                    print("\nIt's a tie!\n")
-                return 0
-            break
+            result = get_board_result(board)
+            if not mute:
+                print_result(result)
+            return result
 
 def play_chess_debug(white_player, black_player):
     '''

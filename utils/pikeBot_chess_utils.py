@@ -104,7 +104,16 @@ class Pikebot(ChessBot):
     - opponents_elo (int): elo ranking of the opponent
     - is_white (bool): true if the bot plays as white and the opponent plays as black, false otherwise
     '''
-    def __init__(self, model, aggregate, stockfish_path, color="white", time_limit=0.001, engine_depth=8, name="PikeBot", opponents_elo=1500):
+    def __init__(self, 
+                 model, 
+                 aggregate, 
+                 stockfish_path:str, 
+                 color:str="white", 
+                 time_limit:float=0.001, 
+                 engine_depth:int=8, 
+                 name:str="PikeBot", 
+                 opponents_elo:int=1500
+                 ):
         '''
         Initializes the Pikebot object.
 
