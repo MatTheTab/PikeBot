@@ -137,6 +137,7 @@ class Pikebot(ChessBot):
 
     def save_to_history(self, board: chess.Board):
         '''
+        An auxiliary function.
         Saves current board state and its evaluation to move the history
 
         Parameters:
@@ -147,6 +148,7 @@ class Pikebot(ChessBot):
         self.move_history.append(board_copy1)
         opponent_score = self.engine.get_board_score(board)
         self.evaluation_history.append(opponent_score)
+
         
     def get_best_move(self, board):
         '''
