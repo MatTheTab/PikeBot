@@ -134,6 +134,19 @@ class Pikebot(ChessBot):
         self.evaluation_history = list()
         self.opponents_elo = opponents_elo
         self.is_white = 1 if color == 'white' else 0
+
+    def save_to_history(self, board: chess.Board):
+        '''
+        Saves current board state and its evaluation to move the history
+
+        Parameters:
+        -board (chess.Board): State of the board to be saved in the history.
+        '''
+
+        board_copy1 = board.copy()
+        self.move_history.append(board_copy1)
+        opponent_score = self.engine.get_board_score(board)
+        self.evaluation_history.append(opponent_score)
         
     def get_best_move(self, board):
         '''
@@ -146,10 +159,7 @@ class Pikebot(ChessBot):
         - chess.Move: The best move calculated by the bot.
         '''
         #save opponents move and its evaluation to the history
-        board_copy1 = board.copy()
-        self.move_history.append(board_copy1)
-        opponent_info = self.engine.analyse(board, chess.engine.Limit(depth=self.engine_depth, time=self.time_limit))
-        self.evaluation_history.append(opponent_info['score'])
+        self.save_to_history(board)
 
         prediction_vars = []
         my_moves_scores = []
@@ -177,14 +187,11 @@ class Pikebot(ChessBot):
             board.pop()
         best_move = self.aggregate(prediction_vars)
 
-        #save own move to the history
+        #save own move and its evaluation to the history
         board_copy2 = board.copy()
         board_copy2.push(best_move)
-        self.move_history.append(board_copy2)
+        self.save_to_history(board_copy2)
 
-        #save own move evaluation to the history 
-        index = my_moves.index(best_move)
-        self.evaluation_history.append(my_moves_scores[index])
         
         return best_move
 
