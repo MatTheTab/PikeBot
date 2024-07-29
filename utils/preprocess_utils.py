@@ -156,18 +156,21 @@ def normalize(df, columns, mins, maxs):
         df[columns[i]] = (df[columns[i]] - mins[i])/(maxs[i]-mins[i])
     return df
 
-def denormalize(df, columns, mins, maxs):
+def denormalize(df, columns, mins, maxs, batch_number):
     '''
     Denormalizes specified columns in a DataFrame using given min-max values. Currently not used in the preprocess function.
 
     Params:
         - df (DataFrame): DataFrame to process.
-        - columns (list): Columns to denormalize.
+        - columns (dict): Columns to denormalize.
         - mins (list): Minimum values for denormalization.
         - maxs (list): Maximum values for denormalization.
     '''
-    for i in range(len(columns)):
-        df[columns[i]] = df[columns[i]]*(maxs[i]-mins[i]) + mins[i]
+    for column in columns:
+        try:
+            df[column] = df[column]*(maxs[batch_number][column]-mins[batch_number][column]) + mins[batch_number][column]
+        except:
+            pass
     return df
 
 def standardize(df, columns, means, stds):
@@ -184,7 +187,7 @@ def standardize(df, columns, means, stds):
         df[columns[i]] = (df[columns[i]] - means[i])/stds[i]
     return df
 
-def destandardize(df, columns, means, stds):
+def destandardize(df, columns, means, stds, batch_number):
     '''
     Destandardizes specified columns in a DataFrame using given mean and standard deviation values. Currently not used in the preprocess function.
 
@@ -194,8 +197,11 @@ def destandardize(df, columns, means, stds):
         - mins (list): Minimum values for Destandardize.
         - maxs (list): Maximum values for Destandardize.
     '''
-    for i in range(len(columns)):
-        df[columns[i]] = (df[columns[i]]*stds[i]) + means[i]
+    for column in columns:
+        try:
+            df[column] = (df[column]*stds[batch_number][column]) + means[batch_number][column]
+        except:
+            pass
     return df
 
 def batch_normalize(df, columns):
@@ -207,14 +213,14 @@ def batch_normalize(df, columns):
         - df (DataFrame): DataFrame to process.
         - columns (list): Columns to normalize.
     '''
-    mins = []
-    maxs = []
+    mins = {}
+    maxs = {}
     for col in columns:
         min = df[col].min()
         max = df[col].max()
         df[col] = (df[col] - min)/(max-min)
-        mins.append(min)
-        maxs.append(max)
+        mins[col] = min
+        maxs[col] = max
     return df, mins, maxs
 
 def batch_standardize(df, columns):
@@ -226,14 +232,14 @@ def batch_standardize(df, columns):
         - df (DataFrame): DataFrame to process.
         - columns (list): Columns to normalize.
     '''
-    means = []
-    stds = []
+    means = {}
+    stds = {}
     for col in columns:
         mean = df[col].mean()
         std = df[col].std()
         df[col] = (df[col] - mean)/(std)
-        means.append(mean)
-        stds.append(std)
+        means[col] = mean
+        stds[col] = std
     return df, means, stds
 
 def preprocess(df, columns_to_change_types, new_types, columns_to_map, str_vals, columns_to_one_hot, key_strings,
@@ -340,4 +346,78 @@ def preprocess_all(save_name, target_directory, directory, columns_to_change_typ
             file_save_location = f"{target_directory}\\{save_name}_{i}.npy"
             np.save(file_save_location, df.to_numpy())
             compress_file(file_save_location)
-        return mins_list, maxs_list, means_list, stds_list
+        return mins_list, maxs_list, means_list, stds_list, npy_gz_files
+
+def read_metadata_txt(file_path, separator="---"):
+    """
+    Reads metadata from a text file where dictionaries are delineated by a specified separator. Converts key-value pairs in the text file into a list of dictionaries with float values.
+
+    Params:
+        - file_path (str): Path to the text file containing the metadata.
+        - separator (str, optional): String that delineates the end of each dictionary. Defaults to "---".
+
+    Returns:
+        - metadata_list (list): A list of dictionaries containing the metadata. Each dictionary represents a set of key-value pairs from the text file.
+    """
+    metadata_list = []
+    with open(file_path, 'r') as f:
+        current_dict = {}
+        for line in f:
+            line = line.strip()
+            if line == separator:
+                metadata_list.append(current_dict)
+                current_dict = {}
+            elif line:
+                key, value = line.split(': ')
+                current_dict[key] = float(value)
+        if current_dict:
+            metadata_list.append(current_dict)
+    return metadata_list
+
+def depreprocess(dataset_type, metadata_path, processed_df, columns_to_divide, divide_val, cols_to_normalize, cols_to_standardize, batch_number):
+    """
+    Reverses the preprocessing steps on a given DataFrame using stored metadata. This includes reversing normalization, standardization, and division operations.
+
+    Params:
+        - dataset_type (str): Type of the dataset ("train", "val", or "test").
+        - metadata_path (str): Path to the directory containing the metadata files.
+        - processed_df (DataFrame): The DataFrame that was processed and now needs to be depreprocessed.
+        - columns_to_divide (list): List of columns that were divided during preprocessing.
+        - divide_val (list): List of divisor values corresponding to the columns_to_divide.
+        - cols_to_normalize (list): List of columns that were normalized during preprocessing.
+        - cols_to_standardize (list): List of columns that were standardized during preprocessing.
+        - batch_number (int): Batch number used to retrieve corresponding metadata for normalization and standardization.
+
+    Returns:
+        - result_df (DataFrame): The DataFrame after reversing the preprocessing steps.
+    """
+    result_df = processed_df.copy()
+    npy_gz_files = np.load(f"{metadata_path}/npy_gz_files.npy")
+
+    if dataset_type == "train":
+        npy_gz_files = npy_gz_files[0]
+        mins_list = read_metadata_txt(f"{metadata_path}/train_mins_list.txt")
+        maxs_list = read_metadata_txt(f"{metadata_path}/train_maxs_list.txt")
+        means_list = read_metadata_txt(f"{metadata_path}/train_means_list.txt")
+        stds_list = read_metadata_txt(f"{metadata_path}/train_stds_list.txt")
+    elif dataset_type == "val":
+        npy_gz_files = npy_gz_files[1]
+        mins_list = read_metadata_txt(f"{metadata_path}/train_mins_list.txt")
+        maxs_list = read_metadata_txt(f"{metadata_path}/train_maxs_list.txt")
+        means_list = read_metadata_txt(f"{metadata_path}/train_means_list.txt")
+        stds_list = read_metadata_txt(f"{metadata_path}/train_stds_list.txt")
+    else:
+        npy_gz_files = npy_gz_files[2]
+        mins_list = read_metadata_txt(f"{metadata_path}/train_mins_list.txt")
+        maxs_list = read_metadata_txt(f"{metadata_path}/train_maxs_list.txt")
+        means_list = read_metadata_txt(f"{metadata_path}/train_means_list.txt")
+        stds_list = read_metadata_txt(f"{metadata_path}/train_stds_list.txt")
+
+    for i in range(len(columns_to_divide)):
+        col = columns_to_divide[i]
+        multi = divide_val[i]
+        result_df[[col]] = result_df[[col]]* multi
+
+    result_df = denormalize(result_df, cols_to_normalize, mins_list, maxs_list, batch_number)
+    result_df = destandardize(result_df, cols_to_standardize, means_list, stds_list, batch_number)
+    return result_df
