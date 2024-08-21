@@ -392,22 +392,19 @@ def depreprocess(dataset_type, metadata_path, processed_df, columns_to_divide, d
         - result_df (DataFrame): The DataFrame after reversing the preprocessing steps.
     """
     result_df = processed_df.copy()
-    npy_gz_files = np.load(f"{metadata_path}/npy_gz_files.npy")
+    npy_gz_files = np.load(f"{metadata_path}/npy_gz_files_{dataset_type}.npy")
 
     if dataset_type == "train":
-        npy_gz_files = npy_gz_files[0]
         mins_list = read_metadata_txt(f"{metadata_path}/train_mins_list.txt")
         maxs_list = read_metadata_txt(f"{metadata_path}/train_maxs_list.txt")
         means_list = read_metadata_txt(f"{metadata_path}/train_means_list.txt")
         stds_list = read_metadata_txt(f"{metadata_path}/train_stds_list.txt")
     elif dataset_type == "val":
-        npy_gz_files = npy_gz_files[1]
         mins_list = read_metadata_txt(f"{metadata_path}/train_mins_list.txt")
         maxs_list = read_metadata_txt(f"{metadata_path}/train_maxs_list.txt")
         means_list = read_metadata_txt(f"{metadata_path}/train_means_list.txt")
         stds_list = read_metadata_txt(f"{metadata_path}/train_stds_list.txt")
     else:
-        npy_gz_files = npy_gz_files[2]
         mins_list = read_metadata_txt(f"{metadata_path}/train_mins_list.txt")
         maxs_list = read_metadata_txt(f"{metadata_path}/train_maxs_list.txt")
         means_list = read_metadata_txt(f"{metadata_path}/train_means_list.txt")
