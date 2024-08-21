@@ -90,7 +90,7 @@ def create_chessboard_position_heatmap(df, array_column, title = 'Relative Frequ
 
 def create_chessboard_attack_heatmap(df, array_column, title = 'Relative Frequency of Attacked Spaces for The Current Move'):
     """
-    Creates a heatmap showing the relative frequency of occupied spaces on an 8x8 chessboard.
+    Creates a heatmap showing the relative frequency of attacked spaces on an 8x8 chessboard.
     
     Parameters:
     df (pandas.DataFrame): The DataFrame containing the numpy arrays.
@@ -100,6 +100,28 @@ def create_chessboard_attack_heatmap(df, array_column, title = 'Relative Frequen
     num_arrays = len(df)
     for array in df[array_column]:
         slices = array[12:, :, :]
+        combined_board = np.any(slices, axis=0).astype(int)
+        board_frequency += combined_board
+    relative_frequency = board_frequency / num_arrays
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(relative_frequency, annot=True, fmt='.2f', cmap='YlGnBu', linewidths=.5, square=True)
+    plt.title(title)
+    plt.xlabel('File')
+    plt.ylabel('Rank')
+    plt.show()
+
+def create_chessboard_complete_heatmap(df, array_column, title = 'Relative Frequency of Complete Information for Current Move'):
+    """
+    Creates a heatmap showing the relative frequency of attack and occupied spaces on an 8x8 chessboard.
+    
+    Parameters:
+    df (pandas.DataFrame): The DataFrame containing the numpy arrays.
+    array_column (str): The name of the column with numpy arrays of shape (72, 8, 8).
+    """
+    board_frequency = np.zeros((8, 8), dtype=int)
+    num_arrays = len(df)
+    for array in df[array_column]:
+        slices = array
         combined_board = np.any(slices, axis=0).astype(int)
         board_frequency += combined_board
     relative_frequency = board_frequency / num_arrays
@@ -277,7 +299,7 @@ def create_comparison_chessboard_heatmaps_positions(df, array_column, title=None
 
 def create_comparison_chessboard_heatmaps_attacks(df, array_column, title=None):
     """
-    Creates a subplot with two heatmaps comparing the relative frequency of occupied spaces on an 8x8 chessboard 
+    Creates a subplot with two heatmaps comparing the relative frequency of attacked spaces on an 8x8 chessboard 
     for 'human' values 1 and 0.
     
     Parameters:
@@ -299,6 +321,51 @@ def create_comparison_chessboard_heatmaps_attacks(df, array_column, title=None):
     num_arrays_0 = len(df_human_0)
     for array in df_human_0[array_column]:
         slices = array[12:, :, :]
+        combined_board = np.any(slices, axis=0).astype(int)
+        board_frequency_0 += combined_board
+    
+    relative_frequency_1 = board_frequency_1 / num_arrays_1 if num_arrays_1 > 0 else np.zeros((8, 8))
+    relative_frequency_0 = board_frequency_0 / num_arrays_0 if num_arrays_0 > 0 else np.zeros((8, 8))
+    
+    fig, axs = plt.subplots(1, 2, figsize=(16, 6), sharey=True)
+    sns.heatmap(relative_frequency_1, annot=True, fmt='.2f', cmap='YlGnBu', linewidths=.5, square=True, ax=axs[0])
+    axs[0].set_title(f'{title} (Human = 1)' if title else 'Relative Frequency of Attacked Spaces (Human = 1)')
+    axs[0].set_xlabel('File')
+    axs[0].set_ylabel('Rank')
+    
+    sns.heatmap(relative_frequency_0, annot=True, fmt='.2f', cmap='YlGnBu', linewidths=.5, square=True, ax=axs[1])
+    axs[1].set_title(f'{title} (Human = 0)' if title else 'Relative Frequency of Attacked Spaces (Human = 0)')
+    axs[1].set_xlabel('File')
+    axs[1].set_ylabel('Rank')
+    
+    plt.suptitle(title if title else 'Comparison of Attacked Spaces on the 8x8 Chessboard by Human Status')
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.show()
+
+def create_comparison_chessboard_heatmaps_complete(df, array_column, title=None):
+    """
+    Creates a subplot with two heatmaps comparing the relative frequency of complete information on an 8x8 chessboard 
+    for 'human' values 1 and 0.
+    
+    Parameters:
+    df (pandas.DataFrame): The DataFrame containing the numpy arrays.
+    array_column (str): The name of the column with numpy arrays of shape (72, 8, 8).
+    title (str): The title of the plot (optional).
+    """
+    board_frequency_1 = np.zeros((8, 8), dtype=int)
+    board_frequency_0 = np.zeros((8, 8), dtype=int)
+    
+    df_human_1 = df[df['human'] == 1]
+    df_human_0 = df[df['human'] == 0]
+    num_arrays_1 = len(df_human_1)
+    for array in df_human_1[array_column]:
+        slices = array
+        combined_board = np.any(slices, axis=0).astype(int)
+        board_frequency_1 += combined_board
+    
+    num_arrays_0 = len(df_human_0)
+    for array in df_human_0[array_column]:
+        slices = array
         combined_board = np.any(slices, axis=0).astype(int)
         board_frequency_0 += combined_board
     
