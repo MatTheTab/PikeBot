@@ -392,13 +392,12 @@ class Chess_Model(nn.Module):
         return conv_x4 + x
 
 class ChessModel_V2(nn.Module):
-    def __init__(self, bit_board_shape, num_float_inputs, channel_multiple, residual_blocks, residual_filters, se_ratio):
+    def __init__(self, bit_board_shape, num_float_inputs, residual_blocks, residual_filters, se_ratio):
         super(ChessModel_V2, self).__init__()
         self.RESIDUAL_FILTERS = residual_filters
         self.RESIDUAL_BLOCKS = residual_blocks
         self.SE_ratio = se_ratio
         self.num_channels = bit_board_shape[0]
-        self.multiple = channel_multiple
         self.num_float_inputs = num_float_inputs
 
         self.relu = nn.ReLU()
