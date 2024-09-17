@@ -145,7 +145,7 @@ class Pikebot(ChessBot):
 
         board_copy1 = board.copy()
         self.move_history.append(board_copy1)
-        opponent_score = self.engine.get_board_score(board)
+        opponent_score = self.get_board_score(board)
         self.evaluation_history.append(opponent_score)
         
     def get_best_move(self, board):

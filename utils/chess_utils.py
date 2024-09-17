@@ -16,7 +16,7 @@ def get_random_chessboard(min_moves=20, max_moves=100):
     """
     assert min_moves < max_moves, "min_moves should be lower than max_moves"
 
-    num_moves = random.randint(30, 80)
+    num_moves = random.randint(min_moves, max_moves)
     board = chess.Board()
     for _ in range(num_moves):
         legal_moves = list(board.legal_moves)
@@ -41,7 +41,7 @@ def evaluate_all_moves_simple_engine(board, engine, time_limit=0.1):
     Returns:
     - dict: A dictionary where keys are legal moves and values are their corresponding scores.
     """
-    print("hello")
+ 
     all_moves = list(board.legal_moves)
     move_scores = {}
     for move in all_moves:
