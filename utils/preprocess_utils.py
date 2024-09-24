@@ -68,7 +68,7 @@ def calculate_mean(column, directory):
     num_examples = 0
     sum_val = 0
     for file in npy_gz_files:
-        df = read(data_file = f"{directory}\\{file}", column_names_file = f"{directory}\\column_names.txt")
+        df = read(data_file = f"{directory}/{file}", column_names_file = f"{directory}/column_names.txt")
         sum_val += df[column].sum()
         num_examples += len(df[column])
     return sum_val/num_examples
@@ -85,7 +85,7 @@ def calculate_max(column, directory):
     npy_gz_files = [file for file in files if file.endswith('.npy.gz')]
     max_val = -99999
     for file in npy_gz_files:
-        df = read(data_file = f"{directory}\\{file}", column_names_file = f"{directory}\\column_names.txt")
+        df = read(data_file = f"{directory}/{file}", column_names_file = f"{directory}/column_names.txt")
         temp_val = df[column].max()
         if temp_val > max_val:
             max_val = temp_val
@@ -103,7 +103,7 @@ def calculate_min(column, directory):
     npy_gz_files = [file for file in files if file.endswith('.npy.gz')]
     min_val = 99999
     for file in npy_gz_files:
-        df = read(data_file = f"{directory}\\{file}", column_names_file = f"{directory}\\column_names.txt")
+        df = read(data_file = f"{directory}/{file}", column_names_file = f"{directory}/column_names.txt")
         temp_val = df[column].min()
         if temp_val < min_val:
             min_val = temp_val
@@ -121,7 +121,7 @@ def calculate_num_examples(column, directory):
     npy_gz_files = [file for file in files if file.endswith('.npy.gz')]
     num_examples = 0
     for file in npy_gz_files:
-        df = read(data_file = f"{directory}\\{file}", column_names_file = f"{directory}\\column_names.txt")
+        df = read(data_file = f"{directory}/{file}", column_names_file = f"{directory}/column_names.txt")
         num_examples += len(df[column])
     return num_examples
 
@@ -137,7 +137,7 @@ def calculate_standard_deviation(column, mean, num_examples, directory):
     npy_gz_files = [file for file in files if file.endswith('.npy.gz')]
     std_div = 0
     for file in npy_gz_files:
-        df = read(data_file = f"{directory}\\{file}", column_names_file = f"{directory}\\column_names.txt")
+        df = read(data_file = f"{directory}/{file}", column_names_file = f"{directory}/column_names.txt")
         sqr_diff = np.square(df[column] - mean)
         std_div += sqr_diff.sum()
     return np.sqrt(std_div/num_examples)
@@ -286,7 +286,7 @@ def copy_columns_file(columns, target_directory, columns_file):
             - target_directory (str): String representing the target directory to which the file should be saved
             - columns_file (str): String showing the target name of the column names file
     '''
-    target_file = f"{target_directory}\\{columns_file}"
+    target_file = f"{target_directory}/{columns_file}"
     with open(target_file, 'w') as f:
         for column in columns:
             f.write("%s\n" % column)
@@ -328,7 +328,7 @@ def preprocess_all(save_name, target_directory, directory, columns_to_change_typ
         copied_columns = False
         for i in range(len(npy_gz_files)):
             file = npy_gz_files[i]
-            df = read(data_file = f"{directory}\\{file}", column_names_file = f"{directory}\\column_names.txt")
+            df = read(data_file = f"{directory}/{file}", column_names_file = f"{directory}/column_names.txt")
             df = change_column_types(df, columns_to_change_types, new_types)
             df = map_string_val(df, columns_to_map, str_vals)
             df = one_hot_encode_col(df, columns_to_one_hot, key_strings)
@@ -343,7 +343,7 @@ def preprocess_all(save_name, target_directory, directory, columns_to_change_typ
             maxs_list.append(maxes)
             means_list.append(means)
             stds_list.append(stds)
-            file_save_location = f"{target_directory}\\{save_name}_{i}.npy"
+            file_save_location = f"{target_directory}/{save_name}_{i}.npy"
             np.save(file_save_location, df.to_numpy())
             compress_file(file_save_location)
         return mins_list, maxs_list, means_list, stds_list, npy_gz_files

@@ -462,7 +462,7 @@ def get_save_human_move(board, node, str_functions, board_functions, board_qeue,
     return data, board_qeue, board
 
 def save_game_data(columns, engine, depths, time_limits, game_number, game, str_functions, board_functions,
-                    directory = "./stockfish\stockfish-windows-x86-64-avx2.exe", columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True, "current_move_str": True},
+                    directory = "./stockfish/stockfish_windows/stockfish-windows-x86-64-avx2.exe", columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True, "current_move_str": True},
                     shuffle = True, seed = 42, batch_size = 1000, all_games_df = None, max_games = np.inf):
     '''
     Read and transform data from PGN game format to a DataFrame with appropriate information, and save it to a compressed CSV file.
@@ -477,7 +477,7 @@ def save_game_data(columns, engine, depths, time_limits, game_number, game, str_
     - game: The chess game object.
     - str_functions: A list of functions that convert string notation to bitboards.
     - board_functions: A list of functions that generate bitboards from chess.Board objects.
-    - directory (str, optional): Directory path where the data will be saved. Defaults to "./stockfish\stockfish-windows-x86-64-avx2.exe".
+    - directory (str, optional): Directory path where the data will be saved. Defaults to "./stockfish/stockfish_windows/stockfish-windows-x86-64-avx2.exe".
     - columns_data (dict, optional): Dictionary defining the columns of the DataFrame. Defaults to {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True}.
     - shuffle (bool, optional): If the datframe should be shuffled before being returned, default True
     - seed (int, optional): seed for shuffling, default 42
@@ -503,7 +503,7 @@ def save_game_data(columns, engine, depths, time_limits, game_number, game, str_
     if game_number+1 == max_games or (game_number>0 and (game_number+1)%batch_size == 0):
         if shuffle:
             all_games_df = all_games_df.sample(frac=1, random_state=seed).reset_index(drop=True)
-        game_filename = f"{directory}\\game_batch_{game_number//batch_size}.npy"
+        game_filename = f"{directory}/game_batch_{game_number//batch_size}.npy"
         np.save(game_filename, all_games_df.to_numpy())
         compress_file(game_filename)
         all_games_df = None
@@ -515,7 +515,7 @@ def save_column_names(file_path, columns):
         file.write('\n'.join(columns))
 
 def save_data(txt_file_dir, directory_path, file_name, verbose = True, str_functions = [str_to_board_all_figures_colors], board_functions = [get_all_attacks], 
-              stockfish_path = "./stockfish\stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], 
+              stockfish_path = "./stockfish/stockfish_windows/stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], 
               time_limits = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001], max_num_games = np.inf,
               columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True, "current_move_str": True},
               shuffle = True, seed = 42, batch_size = 1000):
@@ -530,7 +530,7 @@ def save_data(txt_file_dir, directory_path, file_name, verbose = True, str_funct
     - verbose (bool, optional): If True, prints the number of processed games in the file. Defaults to True.
     - str_functions (list, optional): List of functions to convert board state to bitboard representation. Defaults to [str_to_board_all_figures_colors].
     - board_functions (list, optional): List of functions to apply on chess board to convert to bitboard notation. Defaults to [get_all_attacks].
-    - stockfish_path (str, optional): The path to the Stockfish chess engine executable. Defaults to "./stockfish\stockfish-windows-x86-64-avx2.exe".
+    - stockfish_path (str, optional): The path to the Stockfish chess engine executable. Defaults to "./stockfish/stockfish_windows/stockfish-windows-x86-64-avx2.exe".
     - depths (list, optional): List of depths for Stockfish engine analysis. Defaults to [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20].
     - time_limits (list, optional): List of time limits for Stockfish engine analysis. Defaults to [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]. Should be the same length as depths list.
     - max_num_games (int, optional): Number of games to read from the PGN file, by default np.infinite, i.e. all games will be read from the file.
@@ -557,7 +557,7 @@ def save_data(txt_file_dir, directory_path, file_name, verbose = True, str_funct
        'past_move_10', 'past_move_11', 'past_move_12', 'current_move',
        'current_move_str']
     all_games_df = pd.DataFrame(columns=columns)
-    save_column_names(txt_file_dir + "\\column_names.txt", columns=columns)
+    save_column_names(txt_file_dir + "/column_names.txt", columns=columns)
     done = False
     i = 0
     with open(file_path, "rb") as compressed_file:
@@ -807,7 +807,7 @@ def greedy_save_game(engine, depths, time_limits, game, str_functions, board_fun
     return df
 
 def greedy_read(directory_path, file_name, verbose = True, str_functions = [str_to_board_all_figures_colors], board_functions = [get_all_attacks], 
-                stockfish_path = "./stockfish\stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], 
+                stockfish_path = "./stockfish/stockfish_windows/stockfish-windows-x86-64-avx2.exe", depths = [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20], 
                 time_limits = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001], starting_game = 0, num_games = np.inf,
                 columns_data = {"human": True, "player": True, "elo": True, "color": True, "event": True, "clock": True, "depths": True, "num_past_moves": 12, "current_move": True},
                 shuffle_df = True, shuffle_list = True, list_seed = 42):
@@ -820,7 +820,7 @@ def greedy_read(directory_path, file_name, verbose = True, str_functions = [str_
     - verbose (bool, optional): If True, prints information during processing. Default is True.
     - str_functions (list, optional): List of functions to convert chess elements to strings. Default is [str_to_board_all_figures_colors].
     - board_functions (list, optional): List of functions to interact with the chess board. Default is [get_all_attacks].
-    - stockfish_path (str, optional): Path to the Stockfish engine executable. Default is "./stockfish\stockfish-windows-x86-64-avx2.exe".
+    - stockfish_path (str, optional): Path to the Stockfish engine executable. Default is "./stockfish/stockfish_windows/stockfish-windows-x86-64-avx2.exe".
     - depths (list, optional): List of depth values for engine search. Default is [1, 2, 3, 4, 5, 8, 10, 12, 15, 16, 18, 20].
     - time_limits (list, optional): List of time limits for the engine search. Default is [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01].
     - starting_game (int, optional): Index of the first game to process. Default is 0.

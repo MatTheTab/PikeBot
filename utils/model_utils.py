@@ -65,10 +65,9 @@ def evaluate(loader, model, loss_func, num_hanging_values, device, verbose, log,
             if X_train is None and y_train is None:
                 break
             total_examples += len(y_train)
-            hanging_vals = X_train[:, :num_hanging_values]
-            bitboards = X_train[:, num_hanging_values]
-            bitboards = np.stack(bitboards)
+            hanging_vals, bitboards = separate_hanging_and_bitboards(X_train)
             hanging_vals = hanging_vals.astype(np.float32)
+            hanging_vals = np.nan_to_num(hanging_vals, nan=0.0)
             hanging_vals = torch.Tensor(hanging_vals).to(device)
             bitboards = torch.Tensor(bitboards).to(device)
             y_train = y_train.astype(np.float32)
@@ -91,6 +90,30 @@ def evaluate(loader, model, loss_func, num_hanging_values, device, verbose, log,
         with open(log_file, "a") as f:
             f.write(f"Epoch {epoch} {name} Loss: {round(total_loss/total_examples, 4)} | MSE: {round(total_MSE/total_examples, 4)} | MAE: {round(total_MAE/total_examples, 4)}  | Accuracy: {round(total_accuracy/total_examples, 4)}\n")
     return total_loss
+
+import numpy as np
+
+def separate_hanging_and_bitboards(X_train):
+    num_columns = X_train.shape[1]
+    hanging_vals = []
+    bitboards = []
+
+    for col in range(num_columns):
+        first_element = X_train[0, col]
+        if isinstance(first_element, (int, float)):
+            col_data = X_train[:, col]
+            hanging_vals.append(col_data)
+        elif isinstance(first_element, np.ndarray):
+            bitboards.append(np.stack(X_train[:, col]))
+        else:
+            raise ValueError(f"Unexpected data type in column {col}: {type(first_element)}")
+        
+    hanging_vals = np.column_stack(hanging_vals)
+    bitboards = np.stack(bitboards, axis=1)
+    batch_dim, mul, channel_dim, width, height = bitboards.shape
+    bitboards = bitboards.reshape(batch_dim, mul*channel_dim, width, height)
+    hanging_vals = np.nan_to_num(hanging_vals, nan=0.0)
+    return hanging_vals, bitboards
 
 def train_epoch(loader, model, optimizer, loss_func, num_hanging_values, device, verbose, log, log_file, epoch):
     '''
@@ -122,10 +145,9 @@ def train_epoch(loader, model, optimizer, loss_func, num_hanging_values, device,
             break
         total_examples += len(y_train)
         optimizer.zero_grad()
-        hanging_vals = X_train[:, :num_hanging_values]
-        bitboards = X_train[:, num_hanging_values]
-        bitboards = np.stack(bitboards)
+        hanging_vals, bitboards = separate_hanging_and_bitboards(X_train)
         hanging_vals = hanging_vals.astype(np.float32)
+        hanging_vals = np.nan_to_num(hanging_vals, nan=0.0)
         hanging_vals = torch.Tensor(hanging_vals).to(device)
         bitboards = torch.Tensor(bitboards).to(device)
         y_train = y_train.astype(np.float32)
@@ -210,9 +232,11 @@ def train(train_loader_path, val_loader_path, test_loader_path, model, optimizer
             learning_rate = update_learning_rate(optimizer=optimizer, curr_lr=learning_rate, epoch=epoch, update_epochs=update_epochs)
         train_loader = efficent_load_object(train_loader_path)
         train_epoch(train_loader, model, optimizer, loss_func, num_hanging_values, device, verbose, log, log_file, epoch)
+        del train_loader
         if val:
             val_loader = efficent_load_object(val_loader_path)
             val_loss = evaluate(val_loader, model, loss_func, num_hanging_values, device, verbose, log, log_file, epoch, name = "Val")
+            del val_loader
             if early_callback:
                 if val_loss <= best_val_loss:
                     best_val_loss = val_loss
@@ -252,6 +276,7 @@ def train(train_loader_path, val_loader_path, test_loader_path, model, optimizer
 
     test_loader = efficent_load_object(test_loader_path)
     test_loss = evaluate(test_loader, model, loss_func, num_hanging_values, device, verbose, log, log_file, epoch, name = "Test")
+    del test_loader
     return model
 
 def save_model(model, model_filename, onnx_filename, bitboard_input_shape, hanging_values_input_shape, opset_version = 11, device = "cpu"):
@@ -282,7 +307,9 @@ class ApplySqueezeExcitation(nn.Module):
 
     def forward(self, inputs):
         x, excited = inputs
-        gammas, betas = excited.view(-1, self.reshape_size, 1, 1).split(self.reshape_size // 2, dim=1)
+        batch_size = x.size(0)
+        excited = excited.view(batch_size, 2, self.reshape_size, 1, 1)
+        gammas, betas = excited[:, 0, :, :, :], excited[:, 1, :, :, :]
         return torch.sigmoid(gammas) * x + betas
 
 class SqueezeExcitationV2(nn.Module):
@@ -300,7 +327,7 @@ class SqueezeExcitationV2(nn.Module):
         return ApplySqueezeExcitation(inputs.size(1))([inputs, excited])
 
 class ConvBlockV2(nn.Module):
-    def __init__(self, in_channels, out_channels, filter_size=3, bn_scale=False):
+    def __init__(self, in_channels, out_channels, filter_size=3):
         super(ConvBlockV2, self).__init__()
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=filter_size, padding=filter_size // 2, bias=False)
         self.bn = nn.BatchNorm2d(out_channels, eps=1e-5)
@@ -317,7 +344,7 @@ class ResidualBlockV2(nn.Module):
         self.conv1 = nn.Conv2d(channels, channels, kernel_size=3, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(channels, eps=1e-5)
         self.conv2 = nn.Conv2d(channels, channels, kernel_size=3, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(channels, eps=1e-5)
+        self.bn2 = nn.BatchNorm2d(channels, eps=1e-5)
         self.se = SqueezeExcitationV2(channels, se_ratio)
         self.relu = nn.ReLU()
 
@@ -327,12 +354,11 @@ class ResidualBlockV2(nn.Module):
         return self.relu(x + out)
 
 class Chess_Model(nn.Module):
-    def __init__(self, bit_board_shape, num_float_inputs, channel_multiple, concatenated_size):
+    def __init__(self, bit_board_shape, num_float_inputs, channel_multiple):
         super(Chess_Model, self).__init__()
         self.num_channels = bit_board_shape[0]
         self.multiple = channel_multiple
         self.num_float_inputs = num_float_inputs
-        self.concat_size = concatenated_size
         
         #RESNET BLOCK 1
         self.conv1 = nn.Conv2d(in_channels=self.num_channels, out_channels=self.num_channels*self.multiple, kernel_size=3, stride=1, padding=1)
@@ -348,6 +374,9 @@ class Chess_Model(nn.Module):
 
         self.pool = nn.MaxPool2d(kernel_size=3, stride=2)
         self.float_inputs_fc = nn.Linear(self.num_float_inputs, 512)
+
+        dummy_input = torch.randn(1, *bit_board_shape)
+        self.concat_size = self._get_concatenated_size(dummy_input)
         self.fc1 = nn.Linear(self.concat_size, 1024)
         self.fc2 = nn.Linear(1024, 64)
         self.output_layer = nn.Linear(64, 1)
@@ -363,6 +392,14 @@ class Chess_Model(nn.Module):
         x = nn.functional.relu(self.fc2(x))
         x =  torch.sigmoid(self.output_layer(x))
         return x
+    
+    def _get_concatenated_size(self, dummy_input):
+        with torch.no_grad():
+            conv_x = self.pool(self.ResNetBlock1(dummy_input))
+            conv_x = self.pool(self.ResNetBlock2(conv_x))
+            conv_x = conv_x.view(conv_x.size(0), -1)
+        return conv_x.size(1) + 512
+
     
     def ResNetBlock1(self, x):
         conv_x1 = self.conv1(x)
@@ -401,11 +438,11 @@ class ChessModel_V2(nn.Module):
         self.num_float_inputs = num_float_inputs
 
         self.relu = nn.ReLU()
-        self.conv_block = ConvBlockV2(3, self.RESIDUAL_FILTERS, bn_scale=True)
+        self.conv_block = ConvBlockV2(self.num_channels, self.RESIDUAL_FILTERS)
         self.residual_blocks = nn.Sequential(*[ResidualBlockV2(self.RESIDUAL_FILTERS, self.SE_ratio) for _ in range(self.RESIDUAL_BLOCKS)])
         self.conv_val = ConvBlockV2(self.RESIDUAL_FILTERS, 32, filter_size=1)
 
-        dummy_input = torch.randn(1, self.num_channels, *bit_board_shape[1:])
+        dummy_input = torch.randn(1, *bit_board_shape)
         self.concatenated_size = self._get_concatenated_size(dummy_input)
         self.fc1 = nn.Linear(self.concatenated_size, 512)
         self.fc2 = nn.Linear(512, 4096)
@@ -426,6 +463,7 @@ class ChessModel_V2(nn.Module):
         conv_val = self.conv_val(flow)
         h_conv_val_flat = conv_val.view(conv_val.size(0), -1)
         x = torch.cat((h_conv_val_flat, hanging_inputs), dim=1)
+        x = self.relu(self.fc1(x))
         x = self.relu(self.fc2(x))
         x = self.relu(self.fc3(x))
         x = torch.sigmoid(self.output(x))
@@ -466,10 +504,9 @@ def test_model(model, loss_func, num_hanging_values, device, test_generator_path
             if X_train is None and y_train is None:
                 break
             total_examples += len(y_train)
-            hanging_vals = X_train[:, :num_hanging_values]
-            bitboards = X_train[:, num_hanging_values]
-            bitboards = np.stack(bitboards)
+            hanging_vals, bitboards = separate_hanging_and_bitboards(X_train)
             hanging_vals = hanging_vals.astype(np.float32)
+            hanging_vals = np.nan_to_num(hanging_vals, nan=0.0)
             hanging_vals = torch.Tensor(hanging_vals).to(device)
             bitboards = torch.Tensor(bitboards).to(device)
             y_train = y_train.astype(np.float32)
