@@ -16,7 +16,7 @@ def get_random_chessboard(min_moves=20, max_moves=100):
     """
     assert min_moves < max_moves, "min_moves should be lower than max_moves"
 
-    num_moves = random.randint(30, 80)
+    num_moves = random.randint(min_moves, max_moves)
     board = chess.Board()
     for _ in range(num_moves):
         legal_moves = list(board.legal_moves)
@@ -41,7 +41,7 @@ def evaluate_all_moves_simple_engine(board, engine, time_limit=0.1):
     Returns:
     - dict: A dictionary where keys are legal moves and values are their corresponding scores.
     """
-    print("hello")
+ 
     all_moves = list(board.legal_moves)
     move_scores = {}
     for move in all_moves:
@@ -629,7 +629,7 @@ class ChessBot(Player):
     - get_best_move(self, board): Gets the best move.
     - close(self): Closes the engine.
     '''
-    def __init__(self, model, aggregate, stockfish_path, color="white", time_limit=0.01, engine_depth=20, name="ChessBot"):
+    def __init__(self, model, aggregate, stockfish_path, color="white", time_limit=0.01, engine_depth=8, name="ChessBot"):
         '''
         Initializes the ChessBot object.
 
@@ -644,6 +644,7 @@ class ChessBot(Player):
         '''
         self.name = name
         self.engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
+    
         self.time_limit = time_limit
         self.model = model
         self.aggregate = aggregate
@@ -675,7 +676,7 @@ class ChessBot(Player):
         Returns:
         -score (int): value of the stockfish evaluation for a given position.
         '''
-        info = self.engine.analyse(board, chess.engine.Limit(depth=self.engine_depth, time=self.time_limit))
+        info = self.engine.analyse(board, chess.engine.Limit(depth=self.engine_depth))
         score = info['score'].pov(color=self.color).score(mate_score=900)
 
         return score

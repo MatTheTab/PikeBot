@@ -189,9 +189,35 @@ def str_to_board_all_figures_colors(str_notation, figs = ["p", "r", "n", "b", "q
         complete_bit_board.append(board)
     return np.array(complete_bit_board)
 
+def board_to_bitboards_optimized(board):
+    """
+    Converts a chess.Board object to multiple bitboards, one for each piece type and color.
+
+    Parameters:
+    - board: A chess.Board object representing the current board state.
+
+    Returns:
+    - A 3D numpy array where each 2D array represents a bitboard for a piece type and color.
+   
+    """
+    piece_types = [chess.PAWN, chess.ROOK, chess.KNIGHT, chess.BISHOP, chess.QUEEN, chess.KING]
+    colors = [chess.WHITE, chess.BLACK]
+    
+    bitboards = np.zeros((12, 8, 8), dtype=np.uint8)
+    
+    for i, color in enumerate(colors):
+        for j, piece_type in enumerate(piece_types):
+            mask = board.pieces(piece_type, color)
+            for square in mask:
+                row, col = divmod(square, 8)
+                bitboards[i * 6 + j][7 - row, col] = 1 
+    
+    return bitboards
+
 def get_all_attacks(board):
+
     '''
-    Generates attack bitboards for all squares on the chess board.
+    Generates attack bitboards for all squares on the chess board using vectorized operations.
 
     Parameters:
     - board: A chess.Board object representing the current board state.
@@ -200,24 +226,12 @@ def get_all_attacks(board):
     - bit_boards: A 3D numpy array representing attack bitboards for all squares on the board.
     Each 2D slice corresponds to the attack bitboard for a specific square.
     '''
-    bit_boards = []
-    for square in chess.SQUARES:
-        row_num = 0
-        col_num = 0
-        bit_board = np.zeros((8, 8))
-        attack_board = board.attacks(square)
-        for val in str(attack_board).replace(" ",""):
-            if row_num == 8:
-                row_num = 0
-                col_num += 1
-            if val == "1":
-                bit_board[col_num][row_num] = 1
-                row_num+=1
-            elif val == ".":
-                row_num+=1
-        bit_boards.append(bit_board)
-    return np.array(bit_boards)
+  
+    attack_masks = np.array([board.attacks(square).mask for square in chess.SQUARES], dtype=np.uint64)
+    binary_matrix = ((attack_masks[:, np.newaxis] & (1 << np.arange(64, dtype=np.uint64))) > 0).astype(int)
 
+ 
+    return binary_matrix.reshape(64, 8, 8)[:, ::-1, :]
 def get_bitboards(str_board, board, str_functions, board_functions):
     '''
     Generates a collection of bitboards from various board representations and functions.
