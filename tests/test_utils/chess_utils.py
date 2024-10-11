@@ -23,16 +23,16 @@ class Test_mean_aggr(unittest.TestCase):
         """
         mock_get_board_score.side_effect = self.mock_get_board_score
 
-        chessBot = ChessBot(
-            model=Uniform_model(None),
-            aggregate=mean_aggr,
-            stockfish_path="D:/Program Files/Stockfish/stockfish/stockfish-windows-x86-64-avx2.exe",
-        )
-
-        board = chess.Board()
-        move, score = chessBot.get_best_move(board)
-
         try:
+            chessBot = ChessBot(
+                model=Uniform_model(None),
+                aggregate=mean_aggr,
+                stockfish_path="D:/Program Files/Stockfish/stockfish/stockfish-windows-x86-64-avx2.exe",
+            )
+
+            board = chess.Board()
+            move, score = chessBot.get_best_move(board)
+
             self.assertAlmostEqual(score, 0.1)
             self.assertEqual(move.uci(), 'e2e4')
         # Clean up
@@ -61,16 +61,17 @@ class Test_max_aggr(unittest.TestCase):
         """
         mock_get_board_score.side_effect = self.mock_get_board_score
 
-        chessBot = ChessBot(
-            model=Uniform_model(None),
-            aggregate=max_aggr,
-            stockfish_path="D:/Program Files/Stockfish/stockfish/stockfish-windows-x86-64-avx2.exe",
-        )
-
-        board = chess.Board()
-        move, score = chessBot.get_best_move(board)
-
         try:
+            chessBot = ChessBot(
+                model=Uniform_model(None),
+                aggregate=max_aggr,
+                stockfish_path="D:/Program Files/Stockfish/stockfish/stockfish-windows-x86-64-avx2.exe",
+            )
+
+            board = chess.Board()
+            move, score = chessBot.get_best_move(board)
+
+
             self.assertAlmostEqual(score, 2)
             self.assertEqual(move.uci(), 'd2d4')
             # Clean up

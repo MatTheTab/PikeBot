@@ -470,7 +470,12 @@ class MoveEvaluationModel:
     def __init__(self, model_path):
         raise NotImplementedError
     
-    def encode(self, move_history: List[chess.Board]):
+    def encode(
+            self,
+            move_history: List[chess.Board],
+            evaluation_history: List[int],
+            additional_attributes: dict
+            ):
         '''
         Encodes the board state to fit int model prediction function.
 
@@ -492,15 +497,15 @@ class MoveEvaluationModel:
         '''
         raise NotImplementedError
     
-    def predict_batch(self, batch):
+    def predict_batch(self, batch: list):
         '''
         Predicts the value of the board state for the batch of examples.
 
         Parameters:
-        - board_state (chess.Board): The encoded board state.
+        - batch (list): A list of models encode method outputs.
 
         Returns:
-        - The predicted values of the board state.
+        - The predicted values for each of the moves.
         '''
         raise NotImplementedError
     
@@ -525,7 +530,12 @@ class Uniform_model(MoveEvaluationModel):
         '''
         print("Model Initialized!")
 
-    def encode(self, move_history: List[chess.Board]):
+    def encode(
+            self,
+            move_history: List[chess.Board],
+            evaluation_history: List[int],
+            additional_attributes: dict
+            ):
         '''
         Encodes the board state.
 
@@ -548,6 +558,18 @@ class Uniform_model(MoveEvaluationModel):
         - float: The predicted value of the board state.
         '''
         return 1.0
+    
+    def predict_batch(self, batch: list):
+        '''
+        Predicts the value of the board state for the batch of examples.
+
+        Parameters:
+        - batch (list): A list of models encode method outputs.
+
+        Returns:
+        - The predicted values of the board state.
+        '''
+        return [1] * len(batch)
     
 def mean_aggr(preds_scores: List[Tuple[chess.Move, float, float]]):
     '''
@@ -632,6 +654,8 @@ class ChessBot(Player):
             self.color = chess.WHITE
         else:
             self.color = chess.BLACK
+        self.move_history = list()
+        self.evaluation_history = list()
 
     def __str__(self):
         '''
@@ -659,21 +683,32 @@ class ChessBot(Player):
 
         return score
     
+    def get_additional_attributes(self):
+        '''
+        Return additional attributes required by the prediction model.
+        '''
+        return None
+    
     def induce_own_move(
             self,
             board: chess.Board,
-            move_history: List[chess.Board],
-            context: dict=None
             ) -> Tuple[chess.Move, float]:
         
         my_moves_scores = []
         my_moves = list(board.legal_moves)
         for move in my_moves:
             board.push(move)
-            move_history.append(board.copy())
-            _, my_score = self.induce_opponents_move(board, move_history)
+            score = self.get_board_score(board)
+            self.move_history.append(board.copy())
+            self.evaluation_history.append(score)
+
+            _, my_score = self.induce_opponents_move(
+                board,
+                )
+            
+            self.evaluation_history.pop()
             my_moves_scores.append((move, my_score))
-            move_history.pop()
+            self.move_history.pop()
             board.pop()
 
         return max(my_moves_scores, key=lambda x: x[1])
@@ -681,24 +716,34 @@ class ChessBot(Player):
     def induce_opponents_move(
             self,
             board: chess.Board,
-            move_history: List[chess.Board],
-            context: dict=None
             ) -> Tuple[chess.Move, float]:
         
         opponent_moves = list(board.legal_moves)
-        prediction_vars = list()
+        used_moves = list()
+        encoded_states = list()
+        scores = list()
+
         for next_move in opponent_moves:
                 board.push(next_move)
-                move_history.append(board.copy())
                 score = self.get_board_score(board)
+                self.move_history.append(board.copy())
+                self.evaluation_history.append(score)
 
-                board_state = self.model.encode(move_history)
-                choice_prob = self.model.predict(board_state)
+                encoded_state = self.model.encode(
+                    self.move_history,
+                    self.evaluation_history,
+                    self.get_additional_attributes())
+                
+                used_moves.append(next_move)
+                encoded_states.append(encoded_state)
+                scores.append(score)
 
-                prediction_vars.append(tuple([next_move, choice_prob, score]))
-                move_history.pop()
+                self.evaluation_history.pop()
+                self.move_history.pop()
                 board.pop()
         
+        choice_probs = self.model.predict_batch(encoded_states)
+        prediction_vars = list(zip(used_moves, choice_probs, scores))
         return self.aggregate(prediction_vars)
 
     def get_best_move(self, board):
@@ -712,7 +757,7 @@ class ChessBot(Player):
         - chess.Move: The best move calculated by the bot.
         '''
 
-        return self.induce_own_move(board, [])
+        return self.induce_own_move(board)
 
     def close(self):
         self.engine.quit()

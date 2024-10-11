@@ -120,7 +120,11 @@ class PikeBotModelWrapper(MoveEvaluationModel):
         bitboard, hanging_inputs = board_state
         return self.model(bitboard, hanging_inputs)
     
-    def predict_batch(self, bitboards_list, hanging_inputs_list):
+    def predict_batch(self, encoded_states: list):
+        all_bitboards = [
+            torch.from_numpy(np.reshape(encoded_state[0], (encoded_state[0].shape[0], -1, encoded_state[0].shape[3], encoded_state[0].shape[4])))
+            for encoded_state in encoded_states]
+        all_meta_data = [encoded_state[1] for encoded_state in encoded_states]
         '''
         Predict the probabilities for a batch of positions to be achieved by a human.
 
@@ -134,11 +138,12 @@ class PikeBotModelWrapper(MoveEvaluationModel):
         - List of floats: predicted probabilities of human moves for each position in the batch.
         '''
         # Batch the bitboards and hanging inputs using torch.stack
-        bitboards = torch.cat(bitboards_list)  # Stack the bitboards into a single tensor
-        hanging_inputs = torch.cat(hanging_inputs_list)  # Stack the hanging inputs into a single tensor
+        bitboards = torch.cat(all_bitboards)  # Stack the bitboards into a single tensor
+        hanging_inputs = torch.cat(all_meta_data)  # Stack the hanging inputs into a single tensor
 
         # Perform batch prediction using the model
-        return self.model(bitboards, hanging_inputs)
+        result: torch.Tensor = self.model(bitboards, hanging_inputs)
+        return result.detach().numpy()
      
 class Pikebot(ChessBot):
     '''
@@ -184,8 +189,6 @@ class Pikebot(ChessBot):
         - is_white (bool): true if the bot plays as white and the opponent plays as black, false otherwise
         '''
         super().__init__(model, aggregate, stockfish_path, color, time_limit, engine_depth, name)
-        self.move_history = list()
-        self.evaluation_history = list()
         self.opponents_elo = opponents_elo
         self.is_white = 1 if color == 'white' else 0
 
@@ -247,58 +250,7 @@ class Pikebot(ChessBot):
       
         self.save_to_history(board)
         
-        prediction_vars = []
-        my_moves = list(board.legal_moves)
-
-        batch_inputs = []
-
-        for move in my_moves:
-            board.push(move)
-            self.move_history.append(board.copy())
-            my_score = self.get_board_score(board)
-            self.evaluation_history.append(my_score)
-
-            
-            opponent_moves = list(board.legal_moves)
-
-            for next_move in opponent_moves:
-                board.push(next_move)
-                self.move_history.append(board.copy())
-                opponent_score = self.get_board_score(board)
-                self.evaluation_history.append(opponent_score)
-
-                bitboards, attributes = self.model.encode(
-                    self.move_history,
-                    self.evaluation_history,
-                    self.get_additional_attributes(),
-                    )
-                batch_inputs.append((move, next_move, bitboards, attributes, opponent_score))
-
-                self.evaluation_history.pop()
-                self.move_history.pop()
-                board.pop()
-
-            self.evaluation_history.pop()
-            self.move_history.pop()
-            board.pop()
-
-     
-        all_bitboards = [
-            torch.from_numpy(np.reshape(bitboards, (bitboards.shape[0], -1, bitboards.shape[3], bitboards.shape[4])))
-            for _, _, bitboards, _, _ in batch_inputs]
-        all_meta_data = [meta_data for _, _, _, meta_data, _ in batch_inputs]
-
-
-        all_predictions = self.model.predict_batch(all_bitboards, all_meta_data)
-
-  
-        for idx, (move, next_move, _, _, opponent_score) in enumerate(batch_inputs):
-            choice_prob = all_predictions[idx]
-            
-            prediction_vars.append((move, next_move, choice_prob, opponent_score))
-
-     
-        best_move = self.aggregate(prediction_vars)
+        best_move = self.induce_own_move(board)
 
      
         board_copy2 = board.copy()
@@ -319,64 +271,13 @@ class Pikebot(ChessBot):
         '''
         #save opponents move and its evaluation to the history
         self.save_to_history(board)
+        
+        best_move, _ = self.induce_own_move(board)
 
-        prediction_vars = []
-        my_moves_scores = []
-        my_moves = list(board.legal_moves)
-        for move in my_moves:
-            board.push(move)
-            my_score = self.get_board_score(board)
-            my_moves_scores.append(my_score)
-            board_state2 = self.model.encode(board, {
-                    'elo' : self.opponents_elo,
-                    'color' : self.is_white,
-                    'clock':np.random.randint(100,900),
-                    'stockfish_score_depth_8' : my_score,
-                    'stockfish_difference_depth_8' : my_score - self.evaluation_history[-1],
-                    'bullet':0,
-                    'rapid':0,
-                    'classic':1,
-                    'blitz':0,
-                    'rated':1
-                    })
-            
-            opponent_moves = list(board.legal_moves)    
-            for next_move in opponent_moves:
-                board.push(next_move)
-                score = self.get_board_score(board)
-
-                board_state = self.model.encode(board, {
-                    'elo' : self.opponents_elo,
-                    'color' : self.is_white,
-                    'clock':np.random.randint(100,900),
-                    'stockfish_score_depth_8' : score,
-                    'stockfish_difference_depth_8' : my_score + score,
-                    'bullet':0,
-                    'rapid':0,
-                    'classic':1,
-                    'blitz':0,
-                    'rated':1
-                    })
-
-             
-                bitboards = np.stack((board_state2[0], board_state[0]), axis=1)
-             
-                batch_dim, mul, channel_dim, width, height = bitboards.shape
-                bitboards = bitboards.reshape(batch_dim, mul*channel_dim, width, height)
-           
-                i1=torch.from_numpy(bitboards)
-                
-                choice_prob = self.model.predict((i1,board_state[1]))
-
-                prediction_vars.append(tuple([move, next_move, choice_prob, score]))
-                board.pop()
-            board.pop()
-        best_move = self.aggregate(prediction_vars)
-
-        #save own move and its evaluation to the history
+     
         board_copy2 = board.copy()
         board_copy2.push(best_move)
         self.save_to_history(board_copy2)
 
-        
         return best_move
+
