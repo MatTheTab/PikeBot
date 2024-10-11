@@ -1,4 +1,5 @@
 from stockfish import Stockfish
+from typing import Tuple, List
 import chess
 import chess.engine
 import random
@@ -507,7 +508,7 @@ class Uniform_model:
         '''
         return 1.0
     
-def mean_aggr(preds_scores):
+def mean_aggr(preds_scores: List[Tuple[chess.Move, float, float]]):
     '''
     Calculate the mean value of predictions based on choice probabilities and scores. Multiply for each of opponents move the probability they will do this move times its score (score respective to how good it is for us)
 
@@ -520,7 +521,7 @@ def mean_aggr(preds_scores):
     expected_scores = [prob*score for _, prob, score in preds_scores]
     return (None, np.average(expected_scores))
 
-def mean_aggr_debug(preds_scores):
+def mean_aggr_debug(preds_scores: List[Tuple[chess.Move, float, float]]):
     '''
     Calculate the mean value of predictions based on choice probabilities and scores. Multiply for each of opponents move the probability they will do this move times its score (score respective to how good it is for us)
     Additional info printed for debugging purposes.
@@ -536,7 +537,7 @@ def mean_aggr_debug(preds_scores):
     print(expected_scores)
     return (None, np.average(expected_scores))
 
-def max_aggr(preds_scores):
+def max_aggr(preds_scores: List[Tuple[chess.Move, float, float]]):
     '''
     Calculate the best-case opponents move as move which leads to the maximum value of probability of move multiplied by chance the opponent will make this move.
 
@@ -549,7 +550,7 @@ def max_aggr(preds_scores):
     best_tuple = max(preds_scores, key=lambda x: x[1]*x[2])
     return (best_tuple[0], best_tuple[2])
 
-def max_aggr_debug(preds_scores):
+def max_aggr_debug(preds_scores: List[Tuple[chess.Move, float, float]]):
     '''
     Calculate the best-case opponents move as move which leads to the maximum value of probability of move multiplied by chance the opponent will make this move.
     Includes additional statements for debugging.
@@ -585,7 +586,7 @@ class ChessBot(Player):
     - get_best_move(self, board): Gets the best move.
     - close(self): Closes the engine.
     '''
-    def __init__(self, model, aggregate, stockfish_path, color="white", time_limit=0.01, engine_depth=8, name="ChessBot"):
+    def __init__(self, model, aggregate, stockfish_path: str, color: str="white", time_limit=0.01, engine_depth=8, name="ChessBot"):
         '''
         Initializes the ChessBot object.
 
@@ -637,19 +638,20 @@ class ChessBot(Player):
 
         return score
     
-    def induce_own_move(self, board: chess.Board, context: dict):
-        prediction_vars = []
+    def induce_own_move(self, board: chess.Board, context: dict=None) -> Tuple[chess.Move, float]:
         my_moves_scores = []
         my_moves = list(board.legal_moves)
         for move in my_moves:
             board.push(move)
             _, my_score = self.induce_opponents_move(board, None)
-            my_moves_scores.append(my_score)
+            my_moves_scores.append((move, my_score))
+            board.pop()
 
-        pass
+        return max(my_moves_scores, key=lambda x: x[1])
 
-    def induce_opponents_move(self, board: chess.Board, context: dict):
+    def induce_opponents_move(self, board: chess.Board, context: dict=None) -> Tuple[chess.Move, float]:
         opponent_moves = list(board.legal_moves)
+        prediction_vars = list()
         for next_move in opponent_moves:
                 board.push(next_move)
                 score = self.get_board_score(board)
@@ -657,9 +659,10 @@ class ChessBot(Player):
                 board_state = self.model.encode(board)
                 choice_prob = self.model.predict(board_state)
 
-                prediction_vars.append(tuple([move, next_move, choice_prob, score]))
+                prediction_vars.append(tuple([next_move, choice_prob, score]))
                 board.pop()
-        pass
+        
+        return self.aggregate(prediction_vars)
 
     def get_best_move_verbose(self, board):
         '''
