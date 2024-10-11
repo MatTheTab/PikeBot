@@ -470,12 +470,12 @@ class MoveEvaluationModel:
     def __init__(self, model_path):
         raise NotImplementedError
     
-    def encode(self, board):
+    def encode(self, move_history: List[chess.Board]):
         '''
         Encodes the board state to fit int model prediction function.
 
         Parameters:
-        - board (chess.Board): The current state of the chess board.
+        - move_history List[chess.Board]: List of board states up to the current one.
 
         '''
         raise NotImplementedError
@@ -525,17 +525,17 @@ class Uniform_model(MoveEvaluationModel):
         '''
         print("Model Initialized!")
 
-    def encode(self, board):
+    def encode(self, move_history: List[chess.Board]):
         '''
         Encodes the board state.
 
         Parameters:
-        - board (chess.Board): The current state of the chess board.
+        - move_history List[chess.Board]: List of board states up to the current one.
 
         Returns:
         - chess.Board: The encoded board state.
         '''
-        return board
+        return move_history[-1]
 
     def predict(self, board_state):
         '''
@@ -659,28 +659,44 @@ class ChessBot(Player):
 
         return score
     
-    def induce_own_move(self, board: chess.Board, context: dict=None) -> Tuple[chess.Move, float]:
+    def induce_own_move(
+            self,
+            board: chess.Board,
+            move_history: List[chess.Board],
+            context: dict=None
+            ) -> Tuple[chess.Move, float]:
+        
         my_moves_scores = []
         my_moves = list(board.legal_moves)
         for move in my_moves:
             board.push(move)
-            _, my_score = self.induce_opponents_move(board, None)
+            move_history.append(board.copy())
+            _, my_score = self.induce_opponents_move(board, move_history)
             my_moves_scores.append((move, my_score))
+            move_history.pop()
             board.pop()
 
         return max(my_moves_scores, key=lambda x: x[1])
 
-    def induce_opponents_move(self, board: chess.Board, context: dict=None) -> Tuple[chess.Move, float]:
+    def induce_opponents_move(
+            self,
+            board: chess.Board,
+            move_history: List[chess.Board],
+            context: dict=None
+            ) -> Tuple[chess.Move, float]:
+        
         opponent_moves = list(board.legal_moves)
         prediction_vars = list()
         for next_move in opponent_moves:
                 board.push(next_move)
+                move_history.append(board.copy())
                 score = self.get_board_score(board)
 
-                board_state = self.model.encode(board)
+                board_state = self.model.encode(move_history)
                 choice_prob = self.model.predict(board_state)
 
                 prediction_vars.append(tuple([next_move, choice_prob, score]))
+                move_history.pop()
                 board.pop()
         
         return self.aggregate(prediction_vars)
@@ -695,21 +711,8 @@ class ChessBot(Player):
         Returns:
         - chess.Move: The best move calculated by the bot.
         '''
-        prediction_vars = []
-        my_moves = list(board.legal_moves)
-        for move in my_moves:
-            board.push(move)
-            opponent_moves = list(board.legal_moves)
-            for next_move in opponent_moves:
-                board.push(next_move)
-                score = self.get_best_move(board)
-                board_state = self.model.encode(board)
-                choice_prob = self.model.predict(board_state)
-                prediction_vars.append(tuple([move, next_move, choice_prob, score]))
-                board.pop()
-            board.pop()
-        best_move = self.aggregate(prediction_vars)
-        return best_move
+
+        return self.induce_own_move(board, [])
 
     def close(self):
         self.engine.quit()

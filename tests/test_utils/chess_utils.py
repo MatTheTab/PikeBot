@@ -30,12 +30,14 @@ class Test_mean_aggr(unittest.TestCase):
         )
 
         board = chess.Board()
-        move, score = chessBot.induce_own_move(board)
+        move, score = chessBot.get_best_move(board)
 
-        self.assertAlmostEqual(score, 0.1)
-        self.assertEqual(move.uci(), 'e2e4')
+        try:
+            self.assertAlmostEqual(score, 0.1)
+            self.assertEqual(move.uci(), 'e2e4')
         # Clean up
-        chessBot.close()
+        finally:
+            chessBot.close()
 
 class Test_max_aggr(unittest.TestCase):
 
@@ -66,12 +68,14 @@ class Test_max_aggr(unittest.TestCase):
         )
 
         board = chess.Board()
-        move, score = chessBot.induce_own_move(board)
+        move, score = chessBot.get_best_move(board)
 
-        self.assertAlmostEqual(score, 2)
-        self.assertEqual(move.uci(), 'd2d4')
-        # Clean up
-        chessBot.close()
+        try:
+            self.assertAlmostEqual(score, 2)
+            self.assertEqual(move.uci(), 'd2d4')
+            # Clean up
+        finally:
+            chessBot.close()
 
 if __name__ == "__main__":
     unittest.main()
