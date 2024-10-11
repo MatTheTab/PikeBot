@@ -1,7 +1,9 @@
 from stockfish import Stockfish
+from typing import Tuple, List
 import chess
 import chess.engine
 import random
+import numpy as np
 
 def get_random_chessboard(min_moves=20, max_moves=100):
     """
@@ -461,7 +463,53 @@ def play_chess_debug(white_player, black_player):
                 print("\nIt's a tie!\n")
             break
 
-class Uniform_model:
+class MoveEvaluationModel:
+    '''
+    Abstract class for a model evaluating move probability.
+    '''
+    def __init__(self, model_path):
+        raise NotImplementedError
+    
+    def encode(
+            self,
+            move_history: List[chess.Board],
+            evaluation_history: List[int],
+            additional_attributes: dict
+            ):
+        '''
+        Encodes the board state to fit int model prediction function.
+
+        Parameters:
+        - move_history List[chess.Board]: List of board states up to the current one.
+
+        '''
+        raise NotImplementedError
+    
+    def predict(self, board_state):
+        '''
+        Predicts the value of the board state.
+
+        Parameters:
+        - board_state (chess.Board): The encoded board state.
+
+        Returns:
+        - float: The predicted value of the board state.
+        '''
+        raise NotImplementedError
+    
+    def predict_batch(self, batch: list):
+        '''
+        Predicts the value of the board state for the batch of examples.
+
+        Parameters:
+        - batch (list): A list of models encode method outputs.
+
+        Returns:
+        - The predicted values for each of the moves.
+        '''
+        raise NotImplementedError
+    
+class Uniform_model(MoveEvaluationModel):
     '''
     Uniform_model class, represents a uniform model for board evaluation.
 
@@ -482,17 +530,22 @@ class Uniform_model:
         '''
         print("Model Initialized!")
 
-    def encode(self, board):
+    def encode(
+            self,
+            move_history: List[chess.Board],
+            evaluation_history: List[int],
+            additional_attributes: dict
+            ):
         '''
         Encodes the board state.
 
         Parameters:
-        - board (chess.Board): The current state of the chess board.
+        - move_history List[chess.Board]: List of board states up to the current one.
 
         Returns:
         - chess.Board: The encoded board state.
         '''
-        return board
+        return move_history[-1]
 
     def predict(self, board_state):
         '''
@@ -506,106 +559,44 @@ class Uniform_model:
         '''
         return 1.0
     
-def mean_aggr(preds_scores):
+    def predict_batch(self, batch: list):
+        '''
+        Predicts the value of the board state for the batch of examples.
+
+        Parameters:
+        - batch (list): A list of models encode method outputs.
+
+        Returns:
+        - The predicted values of the board state.
+        '''
+        return [1] * len(batch)
+    
+def mean_aggr(preds_scores: List[Tuple[chess.Move, float, float]]):
     '''
     Calculate the mean value of predictions based on choice probabilities and scores. Multiply for each of opponents move the probability they will do this move times its score (score respective to how good it is for us)
-    then calculate mean of these outcomes for each of our moves and pick the best move, i.e. choose the move with the highest average utility of score*prob.
 
     Parameters:
-    - preds_scores (list): A list of tuples containing predictions and scores for each of our and opponents moves (our_move, opponents move, probability, score)
+    - preds_scores (list): A list of tuples containing predictions and scores for each of our and opponents moves (opponents move, probability, score)
 
     Returns:
-    - chess.Move: The move with the highest average utility
+    - (None, float): None representing no chosen move, Average score of the possible moves 
     '''
-    move_stats = {}
-    for move, next_move, choice_prob, score in preds_scores:
-        move_stats[move] = move_stats.get(move, [0, 0])
-        move_stats[move][0] += 1
-        if score is None or choice_prob is None:
-            value = 0
-        else:
-            value = choice_prob * score
-        move_stats[move][1] += value
-    move_means = {}
-    for move, stats in move_stats.items():
-        total_occurrences, total_value = stats
-        move_means[move] = total_value / total_occurrences if total_occurrences > 0 else float('-inf')
-    best_move = max(move_means, key=move_means.get)
-    return best_move
+    expected_scores = [prob*score for _, prob, score in preds_scores]
+    return (None, np.average(expected_scores))
 
-def mean_aggr_debug(preds_scores):
+
+def max_aggr(preds_scores: List[Tuple[chess.Move, float, float]]):
     '''
-    Calculate the mean value of predictions based on choice probabilities and scores. Multiply for each of opponents move the probability they will do this move times its score (score respective to how good it is for us)
-    then calculate mean of these outcomes for each of our moves and pick the best move, i.e. choose the move with the highest average utility of score*prob. Additional info printed for debugging purposes.
+    Calculate the best-case opponents move as move which leads to the maximum value of probability of move multiplied by chance the opponent will make this move.
 
     Parameters:
-    - preds_scores (list): A list of tuples containing predictions and scores for each of our and opponents moves (our_move, opponents move, probability, score)
+    - preds_scores (list): A list of tuples containing predictions and scores for each of our and opponents moves (opponents move, probability, score)
 
     Returns:
-    - chess.Move: The move with the highest average utility
+    - (chess.Move, float): The move with the highest average utility
     '''
-    print(preds_scores)
-    move_stats = {}
-    for move, next_move, choice_prob, score in preds_scores:
-        move_stats[move] = move_stats.get(move, [0, 0])
-        move_stats[move][0] += 1
-        value = choice_prob * score
-        move_stats[move][1] += value
-    print(move_stats)
-    move_means = {}
-    for move, stats in move_stats.items():
-        total_occurrences, total_value = stats
-        move_means[move] = total_value / total_occurrences if total_occurrences > 0 else float('-inf')
-    print(move_means)
-    best_move = max(move_means, key=move_means.get)
-    return best_move
-
-def max_aggr(preds_scores):
-    '''
-    Calculate the best-case move prediction as move which leads to the maximum value of probability of move multiplied by chance the opponent will make this move.
-
-    Parameters:
-    - preds_scores (list): A list of tuples containing predictions and scores for each of our and opponents moves (our_move, opponents move, probability, score)
-
-    Returns:
-    - chess.Move: The move with the highest average utility
-    '''
-    best_move = None
-    best_score = float("-inf")
-    for move, next_move, choice_prob, score in preds_scores:
-        if choice_prob*score>best_score:
-            best_score = choice_prob*score
-            best_move = move
-    if best_move is None:
-        best_move = preds_scores[0][0]
-    return best_move
-
-def max_aggr_debug(preds_scores):
-    '''
-    Calculate the best-case move prediction as move which leads to the maximum value of probability of move multiplied by chance the opponent will make this move. Includes additional print statments for debugging.
-
-    Parameters:
-    - preds_scores (list): A list of tuples containing predictions and scores for each of our and opponents moves (our_move, opponents move, probability, score)
-
-    Returns:
-    - chess.Move: The move with the highest average utility
-    '''
-    best_move = None
-    best_score = float("-inf")
-    for move, next_move, choice_prob, score in preds_scores:
-        if choice_prob*score>best_score:
-            print(f"New best move: {move}")
-            print(f"Opponents Move: {next_move}")
-            print(f"New best score: {choice_prob*score}")
-            print(f"Prev Score: {best_score}")
-            print(f"Evaluated Move Val: {score}")
-            print(f"Move Prob: {choice_prob}")
-            best_score = choice_prob*score
-            best_move = move
-    if best_move is None:
-        print(f"Failsafe triggered: {preds_scores[0][0]}")
-        best_move = preds_scores[0][0]
-    return best_move
+    best_tuple = max(preds_scores, key=lambda x: x[1]*x[2])
+    return (best_tuple[0], best_tuple[2])
 
 
 class ChessBot(Player):
@@ -629,7 +620,16 @@ class ChessBot(Player):
     - get_best_move(self, board): Gets the best move.
     - close(self): Closes the engine.
     '''
-    def __init__(self, model, aggregate, stockfish_path, color="white", time_limit=0.01, engine_depth=8, name="ChessBot"):
+    def __init__(
+            self,
+            model: MoveEvaluationModel,
+            aggregate: callable,
+            stockfish_path: str,
+            color: str="white",
+            time_limit=0.01,
+            engine_depth=8,
+            name="ChessBot"
+            ):
         '''
         Initializes the ChessBot object.
 
@@ -654,6 +654,8 @@ class ChessBot(Player):
             self.color = chess.WHITE
         else:
             self.color = chess.BLACK
+        self.move_history = list()
+        self.evaluation_history = list()
 
     def __str__(self):
         '''
@@ -680,38 +682,69 @@ class ChessBot(Player):
         score = info['score'].pov(color=self.color).score(mate_score=900)
 
         return score
-
-    def get_best_move_verbose(self, board):
+    
+    def get_additional_attributes(self):
         '''
-        Gets the best move considering verbose output.
-
-        Parameters:
-        - board (chess.Board): The current state of the chess board.
-
-        Returns:
-        - chess.Move: The best move calculated by the bot.
+        Return additional attributes required by the prediction model.
         '''
-        prediction_vars = []
+        return None
+    
+    def induce_own_move(
+            self,
+            board: chess.Board,
+            ) -> Tuple[chess.Move, float]:
+        
+        my_moves_scores = []
         my_moves = list(board.legal_moves)
         for move in my_moves:
             board.push(move)
-            opponent_moves = list(board.legal_moves)
-            for next_move in opponent_moves:
-                board.push(next_move)
-                print()
-                print("Board: ")
-                print(board)
-                score = self.get_board_score(board)
-                board_state = self.model.encode(board)
-                choice_prob = self.model.predict(board_state)
-                print("Probability = ", choice_prob)
-                print("Score = ", score)
-                prediction_vars.append(tuple([move, next_move, choice_prob, score]))
-                board.pop()
+            score = self.get_board_score(board)
+            self.move_history.append(board.copy())
+            self.evaluation_history.append(score)
+
+            _, my_score = self.induce_opponents_move(
+                board,
+                )
+            
+            self.evaluation_history.pop()
+            my_moves_scores.append((move, my_score))
+            self.move_history.pop()
             board.pop()
-        print(prediction_vars)
-        best_move = self.aggregate(prediction_vars)
-        return best_move
+
+        return max(my_moves_scores, key=lambda x: x[1])
+
+    def induce_opponents_move(
+            self,
+            board: chess.Board,
+            ) -> Tuple[chess.Move, float]:
+        
+        opponent_moves = list(board.legal_moves)
+        used_moves = list()
+        encoded_states = list()
+        scores = list()
+
+        for next_move in opponent_moves:
+                board.push(next_move)
+                score = self.get_board_score(board)
+                self.move_history.append(board.copy())
+                self.evaluation_history.append(score)
+
+                encoded_state = self.model.encode(
+                    self.move_history,
+                    self.evaluation_history,
+                    self.get_additional_attributes())
+                
+                used_moves.append(next_move)
+                encoded_states.append(encoded_state)
+                scores.append(score)
+
+                self.evaluation_history.pop()
+                self.move_history.pop()
+                board.pop()
+        
+        choice_probs = self.model.predict_batch(encoded_states)
+        prediction_vars = list(zip(used_moves, choice_probs, scores))
+        return self.aggregate(prediction_vars)
 
     def get_best_move(self, board):
         '''
@@ -723,21 +756,8 @@ class ChessBot(Player):
         Returns:
         - chess.Move: The best move calculated by the bot.
         '''
-        prediction_vars = []
-        my_moves = list(board.legal_moves)
-        for move in my_moves:
-            board.push(move)
-            opponent_moves = list(board.legal_moves)
-            for next_move in opponent_moves:
-                board.push(next_move)
-                score = self.get_best_move(board)
-                board_state = self.model.encode(board)
-                choice_prob = self.model.predict(board_state)
-                prediction_vars.append(tuple([move, next_move, choice_prob, score]))
-                board.pop()
-            board.pop()
-        best_move = self.aggregate(prediction_vars)
-        return best_move
+
+        return self.induce_own_move(board)
 
     def close(self):
         self.engine.quit()

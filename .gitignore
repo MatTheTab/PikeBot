@@ -1,3 +1,6 @@
 venv/
 lichess-bot-master/venv
 utils/__pycache__/
+.vscode/
+tests/__pycache__/
+tests/test_utils/__pycache__/

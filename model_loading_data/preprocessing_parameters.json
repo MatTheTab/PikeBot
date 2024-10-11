@@ -4,7 +4,19 @@
         "stockfish_difference_depth_8": [-120, 375]
     },
     "attributes_to_scale": {
-        "elo": [0, 3000]
+        "elo": [0, 3000],
+        "clock": [100, 900]
     },
-    "attributes_order": ["elo", "color", "stockfish_score_depth_8", "stockfish_difference_depth_8"]
+    "attributes_order": [
+        "elo",
+        "color",
+        "clock",
+        "stockfish_score_depth_8",
+        "stockfish_difference_depth_8",
+        "bullet",
+        "rapid",
+        "classic",
+        "blitz",
+        "rated"
+    ]
 }
