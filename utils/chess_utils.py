@@ -463,7 +463,48 @@ def play_chess_debug(white_player, black_player):
                 print("\nIt's a tie!\n")
             break
 
-class Uniform_model:
+class MoveEvaluationModel:
+    '''
+    Abstract class for a model evaluating move probability.
+    '''
+    def __init__(self, model_path):
+        raise NotImplementedError
+    
+    def encode(self, board):
+        '''
+        Encodes the board state to fit int model prediction function.
+
+        Parameters:
+        - board (chess.Board): The current state of the chess board.
+
+        '''
+        raise NotImplementedError
+    
+    def predict(self, board_state):
+        '''
+        Predicts the value of the board state.
+
+        Parameters:
+        - board_state (chess.Board): The encoded board state.
+
+        Returns:
+        - float: The predicted value of the board state.
+        '''
+        raise NotImplementedError
+    
+    def predict_batch(self, batch):
+        '''
+        Predicts the value of the board state for the batch of examples.
+
+        Parameters:
+        - board_state (chess.Board): The encoded board state.
+
+        Returns:
+        - The predicted values of the board state.
+        '''
+        raise NotImplementedError
+    
+class Uniform_model(MoveEvaluationModel):
     '''
     Uniform_model class, represents a uniform model for board evaluation.
 
@@ -521,40 +562,11 @@ def mean_aggr(preds_scores: List[Tuple[chess.Move, float, float]]):
     expected_scores = [prob*score for _, prob, score in preds_scores]
     return (None, np.average(expected_scores))
 
-def mean_aggr_debug(preds_scores: List[Tuple[chess.Move, float, float]]):
-    '''
-    Calculate the mean value of predictions based on choice probabilities and scores. Multiply for each of opponents move the probability they will do this move times its score (score respective to how good it is for us)
-    Additional info printed for debugging purposes.
-
-    Parameters:
-    - preds_scores (list): A list of tuples containing predictions and scores for each of our and opponents moves (opponents move, probability, score)
-
-    Returns:
-    - (None, float): None representing no chosen move, Average score of the possible moves 
-    '''
-    print(preds_scores)
-    expected_scores = [prob*score for _, prob, score in preds_scores]
-    print(expected_scores)
-    return (None, np.average(expected_scores))
 
 def max_aggr(preds_scores: List[Tuple[chess.Move, float, float]]):
     '''
     Calculate the best-case opponents move as move which leads to the maximum value of probability of move multiplied by chance the opponent will make this move.
 
-    Parameters:
-    - preds_scores (list): A list of tuples containing predictions and scores for each of our and opponents moves (opponents move, probability, score)
-
-    Returns:
-    - (chess.Move, float): The move with the highest average utility
-    '''
-    best_tuple = max(preds_scores, key=lambda x: x[1]*x[2])
-    return (best_tuple[0], best_tuple[2])
-
-def max_aggr_debug(preds_scores: List[Tuple[chess.Move, float, float]]):
-    '''
-    Calculate the best-case opponents move as move which leads to the maximum value of probability of move multiplied by chance the opponent will make this move.
-    Includes additional statements for debugging.
-    
     Parameters:
     - preds_scores (list): A list of tuples containing predictions and scores for each of our and opponents moves (opponents move, probability, score)
 
@@ -586,7 +598,16 @@ class ChessBot(Player):
     - get_best_move(self, board): Gets the best move.
     - close(self): Closes the engine.
     '''
-    def __init__(self, model, aggregate, stockfish_path: str, color: str="white", time_limit=0.01, engine_depth=8, name="ChessBot"):
+    def __init__(
+            self,
+            model: MoveEvaluationModel,
+            aggregate: callable,
+            stockfish_path: str,
+            color: str="white",
+            time_limit=0.01,
+            engine_depth=8,
+            name="ChessBot"
+            ):
         '''
         Initializes the ChessBot object.
 
@@ -663,38 +684,6 @@ class ChessBot(Player):
                 board.pop()
         
         return self.aggregate(prediction_vars)
-
-    def get_best_move_verbose(self, board):
-        '''
-        Gets the best move considering verbose output.
-
-        Parameters:
-        - board (chess.Board): The current state of the chess board.
-
-        Returns:
-        - chess.Move: The best move calculated by the bot.
-        '''
-        prediction_vars = []
-        my_moves = list(board.legal_moves)
-        for move in my_moves:
-            board.push(move)
-            opponent_moves = list(board.legal_moves)
-            for next_move in opponent_moves:
-                board.push(next_move)
-                print()
-                print("Board: ")
-                print(board)
-                score = self.get_board_score(board)
-                board_state = self.model.encode(board)
-                choice_prob = self.model.predict(board_state)
-                print("Probability = ", choice_prob)
-                print("Score = ", score)
-                prediction_vars.append(tuple([move, next_move, choice_prob, score]))
-                board.pop()
-            board.pop()
-        print(prediction_vars)
-        best_move = self.aggregate(prediction_vars)
-        return best_move
 
     def get_best_move(self, board):
         '''
