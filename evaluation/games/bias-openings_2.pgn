@@ -1,0 +1,500 @@
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 d5 2. c4 d4 3. e3 c5 4. b4 Nf6 5. Bb2 Be6 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 d5 2. c4 dxc4 3. e3 Be6 4. Ng5 Bd5 5. e4 Qd6 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 d5 2. c4 e6 3. d4 Nf6 4. g3 c5 5. cxd5 Qd6 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 d5 2. e3 c5 3. d4 e6 4. c4 Nf6 5. cxd5 h5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 d5 2. e3 e6 3. d4 Nf6 4. c4 Be7 5. Be2 Kd7 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 d5 2. e3 Nf6 3. c4 e6 4. d4 Be7 5. Be2 b5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 d5 2. d4 Nf6 3. c4 e6 4. g3 c5 5. cxd5 Qd6 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 d5 2. d4 e6 3. c4 Nf6 4. Nc3 c5 5. cxd5 Qa5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 d5 2. d4 c6 3. c4 Nf6 4. Nc3 e6 5. e3 g5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 e6 2. g3 d5 3. c4 a6 4. d4 dxc4 5. Bg2 Kd7 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 e6 2. g3 Nf6 3. Bg2 d5 4. d4 c5 5. c4 Kd7 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 e6 2. g3 Be7 3. c4 c5 4. Bg2 Nf6 5. O-O e5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 e6 2. d4 Nf6 3. c4 d5 4. g3 c5 5. Bg2 Ng8 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 e6 2. d4 c5 3. Nc3 cxd4 4. Nxd4 d6 5. g4 g5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 e6 2. c4 Nf6 3. g3 c5 4. Nc3 Nc6 5. Bg2 Ke7 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 e6 2. c4 c5 3. g3 Nf6 4. Bg2 Be7 5. d4 Bd6 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 Nf6 2. e3 e6 3. c4 Be7 4. d4 O-O 5. b3 e5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 Nf6 2. e3 c5 3. c4 e6 4. Be2 Be7 5. d4 b6 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 Nf6 2. e3 g6 3. d4 c5 4. dxc5 Qa5+ 5. Nbd2 Nd5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 Nf6 2. c4 c5 3. g3 g6 4. d4 cxd4 5. Nxd4 b6 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 Nf6 2. c4 e6 3. g3 b6 4. Bg2 Bb7 5. O-O g5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 Nf6 2. c4 c6 3. d4 d5 4. Nc3 e6 5. Bg5 Kd7 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 Nf6 2. d4 d5 3. c4 dxc4 4. e3 e6 5. Bxc4 Kd7 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 Nf6 2. d4 c6 3. c4 d5 4. Nc3 e6 5. e3 Rg8 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. Nf3 Nf6 2. d4 g6 3. c4 Bg7 4. Qc2 d5 5. Nc3 Ng4 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 d5 2. e3 e6 3. c4 Nf6 4. Nf3 c5 5. cxd5 Qc7 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 d5 2. e3 Nf6 3. Nf3 Bf5 4. c4 e6 5. Qb3 Na6 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 d5 2. e3 g6 3. Nf3 Nf6 4. c4 Bg7 5. cxd5 Nh5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 d5 2. Nf3 Bf5 3. c4 e6 4. Nc3 Nf6 5. Qb3 Bg4 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 d5 2. Nf3 Nf6 3. c4 e6 4. g3 dxc4 5. Bg2 e5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 d5 2. c4 c6 3. e3 g6 4. h4 Nf6 5. Qb3 Bd7 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 d5 2. c4 e6 3. Nf3 Nf6 4. g3 dxc4 5. Bg2 e5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 d5 2. c4 dxc4 3. e4 e5 4. Nf3 Nc6 5. d5 Nf6 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 Nf6 2. e3 d5 3. c4 e6 4. Qc2 Be7 5. Nf3 e5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 Nf6 2. e3 c5 3. d5 e6 4. Nc3 d6 5. Bc4 Nbd7 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 Nf6 2. e3 e6 3. Nf3 Be7 4. c4 d5 5. b3 e5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 Nf6 2. Nf3 e6 3. c4 b6 4. Qb3 a5 5. a3 g5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 Nf6 2. c4 e6 3. g3 c6 4. Bg2 d5 5. Qc2 e5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 Nf6 2. c4 c6 3. Nc3 d5 4. Nf3 e6 5. Bg5 c5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 Nf6 2. c4 b6 3. Nc3 Bb7 4. d5 e6 5. a3 Ng4 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 e6 2. c4 Nf6 3. g3 c5 4. d5 exd5 5. cxd5 Ng4 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 e6 2. c4 a6 3. Nc3 d5 4. cxd5 exd5 5. Nf3 c5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 e6 2. Nf3 Nf6 3. c4 b6 4. g3 Bb4+ 5. Bd2 Bf8 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 e6 2. Nf3 h6 3. Nbd2 d5 4. e4 c5 5. exd5 Qa5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 e6 2. e4 d5 3. Nd2 c5 4. Ngf3 cxd4 5. Nxd4 Qg5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 e6 2. e4 h6 3. Be3 d5 4. Nd2 dxe4 5. Nxe4 e5 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. d4 e6 2. e4 a6 3. Nc3 c5 4. d5 d6 5. a4 Nh6 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. e4 d5 2. e5 d4 3. Bc4 Nc6 4. Nf3 e6 5. d3 Ke7 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. e4 d5 2. e5 c5 3. c3 d4 4. f4 Nc6 5. d3 c4 *
+
+[Event "Example Event"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Player 1"]
+[Black "Player 2"]
+[Result "*"]
+
+1. e4 d5 2. e5 Bf5 3. Nf3 c5 4. Bb5+ Nd7 5. Nh4 Be4 *
+

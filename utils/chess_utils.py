@@ -365,7 +365,7 @@ def print_result(result:int):
     print("\nIt's a tie!\n")
 
 
-def play_chess(white_player: Player, black_player: Player, mute:bool=False, board:chess.Board=None):
+def play_chess(white_player: Player, black_player: Player, mute:bool=False, board:chess.Board=None) -> Tuple[int, list]:
     '''
     Play a game of chess between two players.
 
@@ -376,6 +376,7 @@ def play_chess(white_player: Player, black_player: Player, mute:bool=False, boar
 
     Returns:
     - int: 1 if white wins, -1 if black wins, 0 if it's a tie.
+    - chess.Board: A chessboard representing the whole game.
     '''
     if not mute:
         print("Game Started!")
@@ -385,7 +386,7 @@ def play_chess(white_player: Player, black_player: Player, mute:bool=False, boar
     if board.is_game_over():
         if not mute:
             print("\nGame already finished!\n")
-        return get_board_result(board)
+        return get_board_result(board), board
     
     while not board.is_game_over():
         if not mute:
@@ -403,7 +404,7 @@ def play_chess(white_player: Player, black_player: Player, mute:bool=False, boar
             result = get_board_result(board)
             if not mute:
                 print_result(result)
-            return result
+            return result, board
             
         black_move = black_player.get_best_move(board)
         if not mute:
@@ -414,7 +415,7 @@ def play_chess(white_player: Player, black_player: Player, mute:bool=False, boar
             result = get_board_result(board)
             if not mute:
                 print_result(result)
-            return result
+            return result, board
 
 def play_chess_debug(white_player, black_player):
     '''
@@ -758,6 +759,11 @@ class ChessBot(Player):
         '''
 
         return self.induce_own_move(board)
+    
+    def reset(self) -> None:
+        "resets bots move and evaluation history"
+        self.move_history = list()
+        self.evaluation_history = list()
 
     def close(self):
         self.engine.quit()
