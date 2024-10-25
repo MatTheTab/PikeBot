@@ -22,7 +22,9 @@ charset-normalizer @ file:///croot/charset-normalizer_1721748349566/work
 chess @ file:///home/conda/feedstock_root/build_artifacts/chess_1710703388170/work
 click @ file:///croot/click_1698129812380/work
 comm @ file:///home/conda/feedstock_root/build_artifacts/comm_1710320294760/work
+contourpy==1.3.0
 cryptography @ file:///croot/cryptography_1694444244250/work
+cycler==0.12.1
 debugpy @ file:///home/conda/feedstock_root/build_artifacts/debugpy_1725269181790/work
 decorator @ file:///home/conda/feedstock_root/build_artifacts/decorator_1641555617451/work
 defusedxml @ file:///tmp/build/80754af9/defusedxml_1615228127516/work
@@ -31,6 +33,7 @@ executing @ file:///home/conda/feedstock_root/build_artifacts/executing_17252144
 fastjsonschema @ file:///opt/conda/conda-bld/python-fastjsonschema_1661371079312/work
 filelock @ file:///croot/filelock_1700591183607/work
 flatbuffers @ file:///croot/python-flatbuffers_1722369094438/work
+fonttools==4.54.1
 frozenlist @ file:///croot/frozenlist_1698702560391/work
 gast @ file:///Users/ktietz/demo/mc3/conda-bld/gast_1628588903283/work
 gmpy2 @ file:///tmp/build/80754af9/gmpy2_1645455533097/work
@@ -66,8 +69,10 @@ jupyterlab-widgets @ file:///croot/jupyterlab_widgets_1709322880313/work
 jupyterlab_server @ file:///croot/jupyterlab_server_1725865349919/work
 keras @ file:///home/builder/mesters/opt/envs/tensorflow/conda-bld/keras_1682445665871/work/keras-2.12.0-py2.py3-none-any.whl
 Keras-Preprocessing @ file:///tmp/build/80754af9/keras-preprocessing_1612283640596/work
+kiwisolver==1.4.7
 Markdown @ file:///croot/markdown_1671541909495/work
 MarkupSafe @ file:///croot/markupsafe_1704205993651/work
+matplotlib==3.9.2
 matplotlib-inline @ file:///home/conda/feedstock_root/build_artifacts/matplotlib-inline_1713250518406/work
 mistune @ file:///opt/conda/conda-bld/mistune_1661496219659/work
 mkl-fft @ file:///croot/mkl_fft_1695058164594/work
@@ -109,6 +114,7 @@ pycparser @ file:///tmp/build/80754af9/pycparser_1636541352034/work
 Pygments @ file:///home/conda/feedstock_root/build_artifacts/pygments_1714846767233/work
 PyJWT @ file:///croot/pyjwt_1715094751094/work
 pyOpenSSL @ file:///croot/pyopenssl_1690223430423/work
+pyparsing==3.1.4
 PyQt5==5.15.10
 PyQt5-sip @ file:///croot/pyqt-split_1698769088074/work/pyqt_sip
 PySocks @ file:///home/builder/ci_310/pysocks_1640793678128/work
@@ -127,6 +133,7 @@ rfc3986-validator @ file:///croot/rfc3986-validator_1683058983515/work
 rpds-py @ file:///croot/rpds-py_1698945930462/work
 rsa @ file:///tmp/build/80754af9/rsa_1614366226499/work
 scipy @ file:///croot/scipy_1717521478074/work/dist/scipy-1.13.1-cp310-cp310-linux_x86_64.whl#sha256=c73757af21f88127db3e72c16ee95d5a104ebd533b662667d352c0765772cf83
+seaborn==0.13.2
 Send2Trash @ file:///croot/send2trash_1699371139552/work
 sip @ file:///croot/sip_1698675935381/work
 six @ file:///tmp/build/80754af9/six_1644875935023/work

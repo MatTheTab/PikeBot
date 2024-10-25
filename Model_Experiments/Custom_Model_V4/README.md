@@ -1,0 +1,1 @@
+# Custom Model Architecture for 500 000 games with 1-move history

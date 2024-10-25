@@ -2,3 +2,9 @@ venv/
 lichess-bot-master/venv
 .vscode/
 __pycache__/
+Data/
+Generators/
+Model_Data/
+Preprocessed_Data/
+stockfish/
+TEMP_DATA_TESTS/
