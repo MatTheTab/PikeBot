@@ -1,10 +1,20 @@
 import chess
 import unittest
+import yaml
 from typing import Tuple
 from unittest.mock import patch
 from utils.chess_utils import ChessBot, mean_aggr, max_aggr, Uniform_model
 
 class Test_mean_aggr(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # Load configuration from YAML file
+        with open('tests/test_utils/pikeBot-config.yaml') as config_file:
+            config = yaml.safe_load(config_file)
+
+        # Retrieve paths and parameters from the config
+        cls.stockfish_path = config['stockfish_path']
 
     def mock_get_board_score(self, board: chess.Board) -> Tuple[chess.Move, float]:
         """
@@ -27,7 +37,7 @@ class Test_mean_aggr(unittest.TestCase):
             chessBot = ChessBot(
                 model=Uniform_model(None),
                 aggregate=mean_aggr,
-                stockfish_path="D:/Program Files/Stockfish/stockfish/stockfish-windows-x86-64-avx2.exe",
+                stockfish_path=self.stockfish_path,
             )
 
             board = chess.Board()
@@ -40,6 +50,15 @@ class Test_mean_aggr(unittest.TestCase):
             chessBot.close()
 
 class Test_max_aggr(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # Load configuration from YAML file
+        with open('tests/test_utils/pikeBot-config.yaml') as config_file:
+            config = yaml.safe_load(config_file)
+
+        # Retrieve paths and parameters from the config
+        cls.stockfish_path = config['stockfish_path']
 
     def mock_get_board_score(self, board: chess.Board) -> Tuple[chess.Move, float]:
         """
@@ -65,7 +84,7 @@ class Test_max_aggr(unittest.TestCase):
             chessBot = ChessBot(
                 model=Uniform_model(None),
                 aggregate=max_aggr,
-                stockfish_path="D:/Program Files/Stockfish/stockfish/stockfish-windows-x86-64-avx2.exe",
+                stockfish_path=self.stockfish_path,
             )
 
             board = chess.Board()

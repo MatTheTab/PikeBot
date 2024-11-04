@@ -4,7 +4,7 @@ import unittest
 import torch
 import numpy as np
 from utils.chess_utils import mean_aggr
-from utils.pikeBot_chess_utils import Pikebot, PikeBotModelWrapper
+from utils.pikeBot500k import PikeBot500k, PikeBotModelWrapper500k
 
 
 class TestPikeBot(unittest.TestCase):
@@ -12,7 +12,7 @@ class TestPikeBot(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Load configuration from YAML file
-        with open('tests/test_utils/configs/pikeBot-config.yaml') as config_file:
+        with open('tests/test_utils/configs/pikeBot500k-config.yaml') as config_file:
             config = yaml.safe_load(config_file)
 
         # Retrieve paths and parameters from the config
@@ -21,8 +21,8 @@ class TestPikeBot(unittest.TestCase):
         cls.preprocessing_parameters_path = config["preprocessing_parameters_path"]
 
         # Initialize the model and bot once for all tests
-        cls.model = PikeBotModelWrapper(cls.model_path, cls.preprocessing_parameters_path)
-        cls.chessBot = Pikebot(model=cls.model, 
+        cls.model = PikeBotModelWrapper500k(cls.model_path, cls.preprocessing_parameters_path)
+        cls.chessBot = PikeBot500k(model=cls.model, 
                                aggregate=mean_aggr,
                                stockfish_path=cls.stockfish_path,
                                color='white',
@@ -58,12 +58,14 @@ class TestPikeBot(unittest.TestCase):
             self.chessBot.get_additional_attributes(),
             )
         self.assertIsNotNone(encoded_state)
-        self.assertEqual((1, 2, 76, 8, 8), encoded_state[0].shape) 
+        self.assertEqual((1, 6, 76, 8, 8), encoded_state[0].shape)   
+        prediction = self.chessBot.model.predict(encoded_state)
         self.assertEqual(type(encoded_state[0]), np.ndarray)  
         self.assertEqual(type(encoded_state[1]), torch.Tensor)  
         prediction = self.chessBot.model.predict(encoded_state)
         self.assertGreaterEqual(prediction, 0)
         self.assertLessEqual(prediction, 1)
+
 
     def test_bot_make_move(self):
         board = chess.Board() 

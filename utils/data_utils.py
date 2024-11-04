@@ -189,6 +189,32 @@ def str_to_board_all_figures_colors(str_notation, figs = ["p", "r", "n", "b", "q
         complete_bit_board.append(board)
     return np.array(complete_bit_board)
 
+def board_to_bitboards_optimized(board):
+    """
+    Converts a chess.Board object to multiple bitboards, one for each piece type and color.
+
+    Parameters:
+    - board: A chess.Board object representing the current board state.
+
+    Returns:
+    - A 3D numpy array where each 2D array represents a bitboard for a piece type and color.
+   
+    """
+    piece_types = [chess.PAWN, chess.ROOK, chess.KNIGHT, chess.BISHOP, chess.QUEEN, chess.KING]
+    colors = [chess.WHITE, chess.BLACK]
+    
+    bitboards = np.zeros((12, 8, 8), dtype=np.uint8)
+    
+    for i, color in enumerate(colors):
+        for j, piece_type in enumerate(piece_types):
+            mask = board.pieces(piece_type, color)
+            for square in mask:
+                row, col = divmod(square, 8)
+                bitboards[i * 6 + j][7 - row, col] = 1 
+    
+    return bitboards
+
+
 def get_all_attacks(board):
     '''
     Generates attack bitboards for all squares on the chess board.
