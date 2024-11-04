@@ -118,7 +118,9 @@ class PikeBotModelWrapper(MoveEvaluationModel):
         - float: predicted probability of the human move
         '''
         bitboard, hanging_inputs = board_state
-        return self.model(bitboard, hanging_inputs)
+        #I don't know why it works but as long as it does don't touch it.
+        bitboard_tensor = torch.from_numpy(np.reshape(board_state[0], (board_state[0].shape[0], -1, board_state[0].shape[3], board_state[0].shape[4])))
+        return self.model(bitboard_tensor, hanging_inputs)
     
     def predict_batch(self, encoded_states: list):
         all_bitboards = [
