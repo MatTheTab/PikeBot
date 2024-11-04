@@ -1,3 +1,3 @@
-stockfish_path: "C:/Program Files/stockfish/stockfish-windows-x86-64-avx2"
-model_path: "Models/PikeBot_Models/500k/Custom_Model_500000.pth"
-preprocessing_parameters_path : "model_loading_data/preprocessing_parameters.json"
+stockfish_path: D:/Program Files/Stockfish/stockfish/stockfish-windows-x86-64-avx2.exe
+model_path: Models/PikeBot_Models/500k/PikeBot500k.pth
+preprocessing_parameters_path: model_loading_data/preprocessing_parameters.json

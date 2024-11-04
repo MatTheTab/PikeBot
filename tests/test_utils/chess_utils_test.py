@@ -10,7 +10,7 @@ class Test_mean_aggr(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Load configuration from YAML file
-        with open('tests/test_utils/pikeBot-config.yaml') as config_file:
+        with open('tests/test_utils/configs/pikeBot-config.yaml') as config_file:
             config = yaml.safe_load(config_file)
 
         # Retrieve paths and parameters from the config
@@ -54,7 +54,7 @@ class Test_max_aggr(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Load configuration from YAML file
-        with open('tests/test_utils/pikeBot-config.yaml') as config_file:
+        with open('tests/test_utils/configs/pikeBot-config.yaml') as config_file:
             config = yaml.safe_load(config_file)
 
         # Retrieve paths and parameters from the config
