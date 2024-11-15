@@ -10,14 +10,25 @@ from typing import List
 stockfish_path = "D:/Program Files/Stockfish/stockfish/stockfish-windows-x86-64-avx2.exe"
 assert os.path.exists(stockfish_path)
 
+def set_engine_history(engine: chess_utils.ChessBot, move_history: List[chess.Board]):
+    engine.move_history = move_history
+    engine.evaluation_history = [
+        engine.get_board_score(history_board)
+            for history_board in move_history
+        ]
 
-def compare_engines(engine1:chess_utils.Player, engine2:chess_utils.Player, boards:list):
+
+def compare_engines(engine1:chess_utils.Player, engine2:chess_utils.Player, boards_dataset:List[tuple[chess.Board, List[chess.Board]]]):
     engine1.color = chess.WHITE
     engine2.color = chess.BLACK
     results = []
     games = []
 
-    for board in boards:
+    for board, move_history in boards_dataset:
+        # set move history and evaluation history
+        for engine in [engine1, engine2]:
+            if isinstance(engine, chess_utils.ChessBot):
+                set_engine_history(engine, move_history)
         result = chess_utils.play_chess(engine1, engine2, mute=True, board=board.copy())
         results.append(result[0])
         games.append(result[1])

@@ -724,6 +724,9 @@ class ChessBot(Player):
         encoded_states = list()
         scores = list()
 
+        if not opponent_moves:
+            return None, self.get_board_score(board)
+
         for next_move in opponent_moves:
                 board.push(next_move)
                 score = self.get_board_score(board)
