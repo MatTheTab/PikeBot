@@ -4,7 +4,7 @@ import unittest
 import torch
 import numpy as np
 from utils.chess_utils import mean_aggr
-from utils.pikeBot500k import PikeBot500k, PikeBotModelWrapper500k
+from Pikebot.pikeBot500k import PikeBot500k, PikeBotModelWrapper500k
 
 
 class TestPikeBot(unittest.TestCase):

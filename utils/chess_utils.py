@@ -693,6 +693,8 @@ class ChessBot(Player):
     def induce_own_move(
             self,
             board: chess.Board,
+            depth: int=0,
+            **kwargs,
             ) -> Tuple[chess.Move, float]:
         
         my_moves_scores = []
@@ -717,6 +719,8 @@ class ChessBot(Player):
     def induce_opponents_move(
             self,
             board: chess.Board,
+            depth: int=0,
+            **kwargs,
             ) -> Tuple[chess.Move, float]:
         
         opponent_moves = list(board.legal_moves)
