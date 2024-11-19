@@ -266,7 +266,7 @@ class OptimalSimpleEngineAgent(Player):
         Returns:
         - chess.Move: The best move calculated by the engine.
         '''
-        result = self.engine.play(board, chess.engine.Limit(**self.limits))
+        result = self.engine.play(board, chess.engine.Limit(**self.settings))
         return result.move
 
     def close(self):
@@ -393,10 +393,11 @@ def play_chess(white_player: Player, black_player: Player, mute:bool=False, boar
             print()
             white_player.display_board(board)
 
-        white_move = white_player.get_best_move(board)
-        if not mute:
-            print("\nWhite's Move:", white_move, "\n")
-        white_player.play_move(white_move, board)
+        if board.turn:
+            white_move = white_player.get_best_move(board)
+            if not mute:
+                print("\nWhite's Move:", white_move, "\n")
+            white_player.play_move(white_move, board)
         if not mute:
             black_player.display_board(board)
 
@@ -683,6 +684,29 @@ class ChessBot(Player):
         score = info['score'].pov(color=self.color).score(mate_score=900)
 
         return score
+    
+    def analyse_board(self, board: chess.Board) -> dict:
+        """
+        Runs stockfish evaluation fo all legal moves in a given position.
+
+        Parameters
+        -board (chess.Board): current state of the chess board.
+
+        Returns
+        -move_scores (dict): dictionary of all legal moves with corresponding scores.
+        """
+        # Set MultiPV to the number of legal moves
+        legal_moves_count = len(list(board.legal_moves))
+        info = self.engine.analyse(board, chess.engine.Limit(depth=8), multipv=legal_moves_count)
+        
+        move_scores = {}
+        for entry in info:
+            move = entry["pv"][0]  # Principal Variation (PV) move
+            score = entry["score"].pov(True).score(mate_score=100000)  # Score from White's perspective
+            move_scores[move] = score
+
+        return move_scores
+        
     
     def get_additional_attributes(self):
         '''
