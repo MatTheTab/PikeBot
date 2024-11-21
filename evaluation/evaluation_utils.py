@@ -4,10 +4,11 @@ import utils.chess_utils as chess_utils
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-
+import json
 from typing import List
-
-stockfish_path = "D:/Program Files/Stockfish/stockfish/stockfish-windows-x86-64-avx2.exe"
+from utils.utils import get_paths
+config=get_paths()
+stockfish_path=config['stockfish_path']
 assert os.path.exists(stockfish_path)
 
 def set_engine_history(engine: chess_utils.ChessBot, move_history: List[chess.Board]):
