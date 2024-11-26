@@ -1,5 +1,5 @@
 import json
-import re 
+import os 
 
 def get_paths():
     '''
@@ -7,7 +7,12 @@ def get_paths():
 
     Specify your base_path to the folder where you keep PikeBot 
     '''
-    with open('../config.json') as f:
+    path = os.path.abspath(__file__)
+    path = os.path.dirname(path)
+ 
+    path = os.path.dirname(path)
+    
+    with open(f'{path}/config.json') as f:
         config = json.load(f)
     base_path=config['base_path']
     for key, value in config.items():

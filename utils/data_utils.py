@@ -223,26 +223,21 @@ def get_all_attacks(board):
     - board: A chess.Board object representing the current board state.
 
     Returns:
-    - bit_boards: A 3D numpy array representing attack bitboards for all squares on the board.
-    Each 2D slice corresponds to the attack bitboard for a specific square.
+    - bit_boards: A 3D numpy array (8x8x64) representing attack bitboards for all squares.
     '''
-    bit_boards = []
-    for square in chess.SQUARES:
-        row_num = 0
-        col_num = 0
-        bit_board = np.zeros((8, 8))
-        attack_board = board.attacks(square)
-        for val in str(attack_board).replace(" ",""):
-            if row_num == 8:
-                row_num = 0
-                col_num += 1
-            if val == "1":
-                bit_board[col_num][row_num] = 1
-                row_num+=1
-            elif val == ".":
-                row_num+=1
-        bit_boards.append(bit_board)
-    return np.array(bit_boards)
+    bit_boards = np.zeros((64, 8, 8), dtype=np.uint8)
+    occupied = board.occupied
+    
+    while occupied:
+        square = (occupied & -occupied).bit_length() - 1
+        occupied &= occupied - 1
+        attack_mask= board.attacks_mask(square)
+        while attack_mask:
+            target_square = (attack_mask & -attack_mask).bit_length() - 1
+            attack_mask &= attack_mask - 1
+            bit_boards[square,  (63 ^ target_square) >> 3 , target_square & 7] = 1
+    
+    return bit_boards
 
 def get_bitboards(str_board, board, str_functions, board_functions):
     '''
