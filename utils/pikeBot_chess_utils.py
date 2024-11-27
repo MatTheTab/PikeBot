@@ -252,7 +252,7 @@ class Pikebot(ChessBot):
       
         self.save_to_history(board)
         
-        best_move = self.induce_own_move(board)
+        best_move, _ = self.induce_own_move(board)
 
      
         board_copy2 = board.copy()

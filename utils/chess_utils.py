@@ -4,7 +4,7 @@ import chess
 import chess.engine
 import random
 import numpy as np
-
+from functools import lru_cache
 def get_random_chessboard(min_moves=20, max_moves=100):
     """
     Generate a chessboard at a position created after making between min_moves and max_moves random legal moves.
@@ -646,7 +646,10 @@ class ChessBot(Player):
         '''
         self.name = name
         self.engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
-    
+        self.engine.configure({
+            "Hash": 1024,
+            
+        })
         self.time_limit = time_limit
         self.model = model
         self.aggregate = aggregate
@@ -670,7 +673,26 @@ class ChessBot(Player):
         print(f"Aggregating Function: {self.aggregate}")
         print()
 
-    def get_board_score(self, board: chess.Board) -> int:
+    @lru_cache(maxsize=20000)
+    def get_board_score_cache(self, fen: str) -> int:
+        '''
+        Gives a rating of a provided position using stockfish with the preset depth and time limit.
+
+        Parameters
+        -fen (str): FEN representation of the current state of the chess board.
+
+        Returns:
+        -score (int): value of the stockfish evaluation for a given position.
+        '''
+        board = chess.Board(fen)
+        info = self.engine.analyse(board, chess.engine.Limit(depth=self.engine_depth))
+        score = info['score'].pov(color=self.color).score(mate_score=900)
+
+        return score
+    
+    def get_board_score(self, board):
+        return self.get_board_score_cache(board.fen())
+ #   def get_board_score(self, board: chess.Board) -> int:
         '''
         Gives a rating of a provided position using stockfish with the preset depth and time limit.
 
