@@ -120,3 +120,42 @@ def get_score(board: chess.Board):
     result = engine.analyse(board,  chess.engine.Limit(depth=8))
     value = result['score'].pov(color=chess.WHITE).score(mate_score=900)
     return value
+
+
+def get_probabilities(
+        engine: chess_utils.ChessBot,
+        elo: int,
+        board: chess.Board,
+        model: chess_utils.MoveEvaluationModel
+    ) -> List[float]:
+    engine.opponents_elo = elo
+    encoded_states = list()
+    legal_moves = list(board.legal_moves)
+    for next_move in legal_moves:
+        board.push(next_move)
+        score = engine.get_board_score(board)
+        engine.move_history.append(board.copy())
+        engine.evaluation_history.append(score)
+
+        encoded_state = model.encode(engine.move_history, engine.evaluation_history, engine.get_additional_attributes())
+        encoded_states.append(encoded_state)
+
+        engine.evaluation_history.pop()
+        engine.move_history.pop()
+        board.pop()
+    choice_probs = engine.model.predict_batch(encoded_states).reshape(-1)
+    return choice_probs
+
+def get_move_evaluation_pairs(
+        engine: chess_utils.ChessBot,
+        elo: int,
+        board: chess.Board,
+        model: chess_utils.MoveEvaluationModel
+):
+    choice_probs = get_probabilities(engine, elo, board, model)
+    result = []
+    for move, prob in (board.legal_moves, choice_probs):
+        board.push(move)
+        push_fen = board.fen
+        board.pop()
+        result.append((board.fen, push_fen, choice_probs))
