@@ -1,5 +1,5 @@
 from stockfish import Stockfish
-from typing import Tuple, List
+from typing import Dict, Tuple, List
 import chess
 import chess.engine
 import random
@@ -724,10 +724,41 @@ class ChessBot(Player):
         move_scores = {}
         for entry in info:
             move = entry["pv"][0]  # Principal Variation (PV) move
-            score = entry["score"].pov(True).score(mate_score=100000)  # Score from White's perspective
+            score = entry["score"].pov(color=self.color).score(mate_score=900)  # Score from White's perspective
             move_scores[move] = score
 
         return move_scores
+    
+    def get_n_best_move_scores(self, board: chess.Board, n: int, depth:int=None) -> Dict[chess.Move, int]:
+        """
+        Runs Stockfish evaluation for the top n moves in a given position.
+
+        Parameters:
+        - board (chess.Board): Current state of the chess board.
+        - n (int): Number of top moves to evaluate.
+        - depth (int): Depth at which Stockfish should operate, if None set to self.depth
+
+        Returns:
+        - move_scores (dict): Dictionary of the top n moves with corresponding scores.
+        """
+        if depth is None:
+            depth = self.depth
+
+        # Ensure n does not exceed the number of legal moves
+        legal_moves_count = len(list(board.legal_moves))
+        n = min(n, legal_moves_count)
+
+        # Set MultiPV to n to get the top n moves
+        info = self.engine.analyse(board, chess.engine.Limit(depth=depth), multipv=n)
+
+        move_scores = {}
+        for entry in info:
+            move = entry["pv"][0]  # Principal Variation (PV) move
+            score = entry["score"].pov(color=self.color).score(mate_score=900)  # Score from White's perspective
+            move_scores[move] = score
+
+        return move_scores
+
         
     
     def get_additional_attributes(self):

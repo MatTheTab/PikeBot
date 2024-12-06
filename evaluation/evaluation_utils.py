@@ -208,3 +208,42 @@ def get_boards_dataset(path: str) -> List[Tuple[chess.Board, List[chess.Board]]]
         boards_dataset.append((board, move_history))
 
     return boards_dataset
+
+
+def evaluate_engines(
+        engine1: chess_utils.Player,
+        engine2: chess_utils.Player,
+        boards_datasets: Dict[str, List[Tuple[chess.Board, List[chess.Board]]]],
+        elo1: int, elo2: int
+    ):
+    for path, boards_dataset in boards_datasets.items():
+        result1, boards1 = compare_engines(engine1, engine2, boards_dataset)
+        result2, boards2 = compare_engines(engine2, engine1, boards_dataset)
+
+        name1, name2 = type(engine1).__name__, type(engine2).__name__
+        
+        #define saving directory
+        path_to_save = path.replace('games/', '')
+        path_to_save = path_to_save.replace('.pgn', '')
+        timestamp = time.asctime().replace(' ', '_')
+        timestamp = timestamp.replace(':', '-')
+
+        dir_path = f'{name1}_{name2}_{path_to_save}_{timestamp}'
+        os.makedirs(f'results/{dir_path}', exist_ok=True) 
+        os.makedirs(f'results/{dir_path}/games', exist_ok=True) 
+        os.makedirs(f'results/{dir_path}/statistics', exist_ok=True) 
+        os.makedirs(f'results/{dir_path}/plots', exist_ok=True) 
+
+        #get move evaluation and save games
+        evaluation1 = process_games(boards1, name1, name2, dir_path, elo1, elo2)
+        evaluation2 = process_games(boards2, name2, name1, dir_path, elo2, elo1)
+
+        #plot results and save plots
+        process_results(result1, name1, name2, dir_path)
+        process_results(result2, name2, name1, dir_path)
+
+        process_evaluation(evaluation1, name1, name2, dir_path)
+        process_evaluation(evaluation2, name2, name1, dir_path)
+
+        process_length(boards1, name1, name2, dir_path) 
+        process_length(boards2, name2, name1, dir_path) 
