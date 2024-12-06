@@ -4,6 +4,11 @@ from utils.pikeBot_chess_utils import Pikebot
 
 
 class PikeBotHeuristic5(Pikebot):
+    def __init__(self, model, aggregate, stockfish_path: str, color: str = "white", time_limit: float = 0.001, engine_depth: int = 8, name: str = "PikeBot", opponents_elo: int = 1500):
+        super().__init__(model, aggregate, stockfish_path, color, time_limit, engine_depth, name, opponents_elo)
+        self.max_depth = 3
+        self.n_best_moves = 5
+
     def induce_own_move(
             self,
             board: chess.Board,
@@ -17,7 +22,7 @@ class PikeBotHeuristic5(Pikebot):
         my_moves_scores = []
         if board.legal_moves.count() == 0:
             return None, self.get_board_score(board)
-        best_move_scores = self.get_n_best_move_scores(board, 5, self.depth-depth-2)
+        best_move_scores = self.get_n_best_move_scores(board, self.n_best_moves, self.depth-depth)
         best_score = -float('inf') 
         for move, score in best_move_scores.items():
             board.push(move)
@@ -55,12 +60,10 @@ class PikeBotHeuristic5(Pikebot):
         encoded_states = list()
         scores = list()
 
-        max_depth = 3
-
         if board.legal_moves.count() == 0:
             return None, self.get_board_score(board)
 
-        best_move_scores = self.get_n_best_move_scores(board, 5, depth=self.depth-depth)
+        best_move_scores = self.get_n_best_move_scores(board, self.n_best_moves, depth=self.depth-depth)
 
         best_score = float('inf')
         for next_move, score in best_move_scores.items():
@@ -68,7 +71,7 @@ class PikeBotHeuristic5(Pikebot):
                 self.move_history.append(board.copy())
                 self.evaluation_history.append(score)
 
-                if depth == max_depth:
+                if depth == self.max_depth:
                     encoded_state = self.model.encode(
                         self.move_history,
                         self.evaluation_history,
