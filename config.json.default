@@ -1,6 +1,6 @@
 {   
     "base_path": "C:/Users/creep/Desktop/studia/inzynierka",
-    "stockfish_path":"{base_path}/stockfish/stockfish-windows-x86-64-avx2.exe",
+    "stockfish_path":"D:/Program Files/Stockfish/stockfish/stockfish-windows-x86-64-avx2.exe",
     "maia_path": "{base_path}/Maia/Maia{version}/lc0.exe",
     "pikebotSmall500k_path": "{base_path}/PikeBot/Models/PikeBot_Models/small_500k/PikeBotSmall500k.pth",
     "preprocessing_params_path": "{base_path}/PikeBot/model_loading_data/preprocessing_parameters.json",
