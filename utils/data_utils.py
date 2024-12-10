@@ -200,17 +200,20 @@ def board_to_bitboards_optimized(board):
     - A 3D numpy array where each 2D array represents a bitboard for a piece type and color.
    
     """
-    piece_types = [chess.PAWN, chess.ROOK, chess.KNIGHT, chess.BISHOP, chess.QUEEN, chess.KING]
-    colors = [chess.WHITE, chess.BLACK]
+    boardB=board.occupied_co[False]
+    boardW=board.occupied_co[True]
+    boards = [board.pawns&boardW, board.rooks&boardW, board.knights&boardW, board.bishops&boardW, board.queens&boardW, board.kings&boardW,
+              board.pawns&boardB, board.rooks&boardB, board.knights&boardB, board.bishops&boardB, board.queens&boardB, board.kings&boardB]
     
+
     bitboards = np.zeros((12, 8, 8), dtype=np.uint8)
     
-    for i, color in enumerate(colors):
-        for j, piece_type in enumerate(piece_types):
-            mask = board.pieces(piece_type, color)
-            for square in mask:
-                row, col = divmod(square, 8)
-                bitboards[i * 6 + j][7 - row, col] = 1 
+    for i, mask in enumerate(boards):
+            
+            while mask:
+                target_square = (mask & -mask).bit_length() - 1
+                mask &= mask - 1
+                bitboards[i, (63 ^ target_square) >> 3 , target_square & 7] = 1
     
     return bitboards
 

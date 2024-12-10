@@ -12,7 +12,7 @@ def get_paths():
  
     path = os.path.dirname(path)
     
-    with open(f'{path}/config.json') as f:
+    with open(f'{path}/config.json.default') as f:
         config = json.load(f)
     base_path=config['base_path']
     for key, value in config.items():
