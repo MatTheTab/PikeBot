@@ -23,6 +23,7 @@ sys.path.append(parent_dir)
 
 from utils.chess_utils import ChessBot, Uniform_model, mean_aggr, max_aggr
 from utils.pikeBot_chess_utils import Pikebot, PikeBotModelWrapper
+from Pikebot.PikeBotHeuristic5 import PikeBotHeuristic5
 
 
 
@@ -58,14 +59,15 @@ class PikeBotEngine(ExampleEngine):
                 stockfish_path = config['stockfish_path']
                 model_path = config["model_path"]
                 preprocessing_parameters_path = config["preprocessing_parameters_path"]
-
+            
             model = PikeBotModelWrapper(model_path, preprocessing_parameters_path)
-            self.chessBot = Pikebot( model=model, 
-                                    aggregate=mean_aggr,
-                                    stockfish_path=stockfish_path,
-                                    color=game.my_color,
-                                    opponents_elo = self.opponent_elo
-                                    )
+            self.chessBot = PikeBotHeuristic5(
+                model=model,
+                aggregate=max_aggr,
+                stockfish_path=stockfish_path,
+                color=game.my_color,
+                opponents_elo = self.opponent_elo
+            )
             
 
     def search(self, board: chess.Board, *args: Any) -> PlayResult:

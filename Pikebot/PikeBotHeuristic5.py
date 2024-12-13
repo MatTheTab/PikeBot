@@ -95,7 +95,7 @@ class PikeBotHeuristic5(Pikebot):
                 self.move_history.pop()
                 board.pop()
         
-        if depth == max_depth:
+        if depth == self.max_depth:
             choice_probs = self.model.predict_batch(encoded_states)
             prediction_vars = list(zip(used_moves, choice_probs, [-score for score in scores]))
             return self.aggregate(prediction_vars)
