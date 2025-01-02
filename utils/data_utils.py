@@ -8,7 +8,6 @@ import pandas as pd
 import chess.engine
 import random
 import gzip
-import zstandard as zstd
 
 def extract_games(input_file, output_file, num_games=10_000):
     """
@@ -21,8 +20,10 @@ def extract_games(input_file, output_file, num_games=10_000):
     """
     # Open the compressed .pgn.zst file for reading
     with open(input_file, 'rb') as compressed_file:
-        decompressor = zstd.ZstdDecompressor()
+        decompressor = zstandard.ZstdDecompressor()
         with decompressor.stream_reader(compressed_file) as decompressed_stream:
+            # Wrap the binary stream in a text stream
+            text_stream = io.TextIOWrapper(decompressed_stream, encoding='utf-8')
 
             # Open the output file for writing
             with open(output_file, 'w') as output_pgn:
@@ -30,14 +31,14 @@ def extract_games(input_file, output_file, num_games=10_000):
 
                 # Extract and write games
                 while game_count < num_games:
-                    game = chess.pgn.read_game(decompressed_stream)
+                    game = chess.pgn.read_game(text_stream)
                     if game is None:  # Stop if there are no more games in the file
                         break
 
                     output_pgn.write(str(game) + "\n\n")  # Write the game to the output file
                     game_count += 1
 
-                    if game_count % 1000 == 0:  # Print progress every 1000 games
+                    if game_count % 1000 == 0:  # Print progress every 10,000 games
                         print(f"Extracted {game_count} games...")
 
     print(f"Extraction complete. {game_count} games saved to {output_file}.")
