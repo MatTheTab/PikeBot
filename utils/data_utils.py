@@ -8,6 +8,39 @@ import pandas as pd
 import chess.engine
 import random
 import gzip
+import zstandard as zstd
+
+def extract_games(input_file, output_file, num_games=10_000):
+    """
+    Extracts a specified number of games from a compressed .pgn.zst file
+    and saves them to a new .pgn file.
+
+    :param input_file: Path to the input .pgn.zst file.
+    :param output_file: Path to the output .pgn file.
+    :param num_games: Number of games to extract (default is 1,000,000).
+    """
+    # Open the compressed .pgn.zst file for reading
+    with open(input_file, 'rb') as compressed_file:
+        decompressor = zstd.ZstdDecompressor()
+        with decompressor.stream_reader(compressed_file) as decompressed_stream:
+
+            # Open the output file for writing
+            with open(output_file, 'w') as output_pgn:
+                game_count = 0
+
+                # Extract and write games
+                while game_count < num_games:
+                    game = chess.pgn.read_game(decompressed_stream)
+                    if game is None:  # Stop if there are no more games in the file
+                        break
+
+                    output_pgn.write(str(game) + "\n\n")  # Write the game to the output file
+                    game_count += 1
+
+                    if game_count % 1000 == 0:  # Print progress every 1000 games
+                        print(f"Extracted {game_count} games...")
+
+    print(f"Extraction complete. {game_count} games saved to {output_file}.")
 
 
 def str_to_bitboard_all_pieces(str_notation):
