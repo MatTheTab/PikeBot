@@ -11,3 +11,4 @@ TEMP_DATA_TESTS/
 Models/PikeBot_Models/
 evaluation/results
 config.json
+evaluation/results_final/
