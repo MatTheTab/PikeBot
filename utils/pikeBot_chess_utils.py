@@ -100,12 +100,67 @@ class PikeBotModelWrapper(MoveEvaluationModel):
         bitboard1 = self.get_intupt_bitboard(board1, str_board1)
         bitboard2 = self.get_intupt_bitboard(board2, str_board2)
 
-        attributes_encoded1 = self.encode_attributes(attributes[0])
+        #attributes_encoded1 = self.encode_attributes(attributes[0])
         attributes_encoded2 = self.encode_attributes(attributes[1])
 
         bitboards = np.stack((bitboard1, bitboard2), axis=1)
         
         return (bitboards, attributes_encoded2)
+
+    def encode_batch(
+            self,
+            move_histories: List[List[chess.Board]],  # List of move histories
+            evaluation_histories: List[List[int]],     # List of evaluation histories
+            attributes: dict,                          # Should contain attributes for all positions
+            fen=False):
+        '''
+        Batch version of encode that processes multiple positions at once.
+        
+        Parameters:
+        - move_histories: List of move histories, each containing board states
+        - evaluation_histories: List of evaluation histories
+        - attributes: Dictionary of attributes for each position
+        - fen: Boolean flag for FEN string processing
+        
+        Returns:
+        - Batch of preprocessed parameters that can be fed to the NN model
+        '''
+        batch_size = len(move_histories)
+    
+        # Initialize lists to store processed data
+        bitboards_batch = []
+        attributes_encoded_batch = []
+        
+        # Process each instance in the batch
+        for i in range(batch_size):
+            # Get the last two boards from each move history
+            board1 = move_histories[i][-2]
+            board2 = move_histories[i][-1]
+            
+            if fen:
+                str_board1 = board1.fen()
+                str_board2 = board2.fen()
+            else:
+                str_board1 = ''
+                str_board2 = ''
+            
+            # Process individual boards
+            bitboard1 = self.get_intupt_bitboard(board1, str_board1)
+            bitboard2 = self.get_intupt_bitboard(board2, str_board2)
+            
+            # Stack the two boards
+            game_bitboards = np.stack((bitboard1, bitboard2), axis=1)
+            bitboards_batch.append(game_bitboards)
+            
+            # Process attributes for the current game
+            attributes_encoded = self.encode_attributes(attributes[i][1])  # Using index 1 as in original code
+            attributes_encoded_batch.append(attributes_encoded)
+        
+        # Stack all processed data into batches
+        batched_bitboards = np.stack(bitboards_batch, axis=0)
+        batched_attributes = np.stack(attributes_encoded_batch, axis=0)
+        batched_attributes=torch.tensor(batched_attributes, dtype=torch.float32)
+        return (zip(batched_bitboards, batched_attributes))
 
     def predict(self, board_state):
         '''
@@ -230,7 +285,7 @@ class Pikebot(ChessBot):
                 'color': self.is_white,
                 'clock': np.random.randint(100, 900),
                 'stockfish_score_depth_8': opponent_score,
-                'stockfish_difference_depth_8': my_score + opponent_score,
+                'stockfish_difference_depth_8':opponent_score-my_score,
                 'bullet': 0,
                 'rapid': 0,
                 'classic': 1,
@@ -282,4 +337,48 @@ class Pikebot(ChessBot):
         self.save_to_history(board_copy2)
 
         return best_move
+    
+    def get_best_move_np(self, board):
+        '''
+        Gets the best move.
 
+        Parameters:
+        - board (chess.Board): The current state of the chess board.
+
+        Returns:
+        - chess.Move: The best move calculated by the bot.
+        '''
+        #save opponents move and its evaluation to the history
+        self.save_to_history(board)
+        
+        best_move, _ = self.induce_own_move_np(board)
+
+     
+        board_copy2 = board.copy()
+        board_copy2.push(best_move)
+        self.save_to_history(board_copy2)
+
+        return best_move
+
+    
+    def get_best_move_optimized(self, board):
+        '''
+        Gets the best move.
+
+        Parameters:
+        - board (chess.Board): The current state of the chess board.
+
+        Returns:
+        - chess.Move: The best move calculated by the bot.
+        '''
+        #save opponents move and its evaluation to the history
+        self.save_to_history(board)
+        
+        best_move, _ = self.induce_own_move_optimized(board)
+
+     
+        board_copy2 = board.copy()
+        board_copy2.push(best_move)
+        self.save_to_history(board_copy2)
+
+        return best_move

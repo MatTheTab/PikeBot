@@ -1,3 +1,4 @@
+import asyncio
 from stockfish import Stockfish
 from typing import Dict, Tuple, List
 import chess
@@ -486,6 +487,20 @@ class MoveEvaluationModel:
 
         '''
         raise NotImplementedError
+    def encode_batch(
+            self,
+            move_history: List[chess.Board],
+            evaluation_history: List[int],
+            additional_attributes: dict
+            ):
+        '''
+        Encodes the board state to fit int model prediction function.
+
+        Parameters:
+        - move_history List[chess.Board]: List of board states up to the current one.
+
+        '''
+        raise NotImplementedError
     
     def predict(self, board_state):
         '''
@@ -648,8 +663,9 @@ class ChessBot(Player):
         self.engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
         self.engine.configure({
             "Hash": 1024,
-            
+           
         })
+
         self.time_limit = time_limit
         self.model = model
         self.aggregate = aggregate
@@ -672,6 +688,9 @@ class ChessBot(Player):
         print(f"Model: {self.model}")
         print(f"Aggregating Function: {self.aggregate}")
         print()
+    
+
+
 
     @lru_cache(maxsize=20000)
     def get_board_score_cache(self, fen: str) -> int:
@@ -792,6 +811,157 @@ class ChessBot(Player):
             board.pop()
 
         return max(my_moves_scores, key=lambda x: x[1])
+    
+    def induce_own_move_optimized(
+            self,
+            board: chess.Board,
+            depth: int=0,
+            **kwargs,
+            ) -> Tuple[chess.Move, float]:
+        
+        my_moves_scores = []
+        my_moves = list(board.legal_moves)
+        for move in my_moves:
+            board.push(move)
+            score = self.get_board_score(board)
+            self.move_history.append(board.copy())
+            self.evaluation_history.append(score)
+
+            _, my_score = self.induce_opponents_move_optimized(
+                board,
+                )
+       
+            self.evaluation_history.pop()
+            my_moves_scores.append((move, my_score))
+            self.move_history.pop()
+            board.pop()
+
+        return max(my_moves_scores, key=lambda x: x[1])
+
+    def induce_own_move_np(
+            self,
+            board: chess.Board,
+            depth: int=0,
+            **kwargs,
+            ) -> Tuple[chess.Move, float]:
+        
+        my_moves_scores = []
+        my_moves = list(board.legal_moves)
+     
+        def do_move(move):
+            board.push(move[0])
+            score = self.get_board_score(board)
+            self.move_history.append(board.copy())
+            self.evaluation_history.append(score)
+
+            _, my_score = self.induce_opponents_move_np(
+                board,
+                )
+            
+        
+            self.evaluation_history.pop()
+            my_moves_scores.append((move[0], my_score))
+            self.move_history.pop()
+            board.pop()
+        my_moves=np.array(my_moves).reshape(-1, 1)
+        np.apply_along_axis(do_move, -1, my_moves)
+      
+        return max(my_moves_scores, key=lambda x: x[1])
+    
+
+
+    def induce_opponents_move_np(
+            self,
+            board: chess.Board,
+            depth: int=0,
+            **kwargs,
+            ) -> Tuple[chess.Move, float]:
+        
+        opponent_moves = list(board.legal_moves)
+        used_moves = list()
+        encoded_states = list()
+        scores = list()
+        def do_move(next_move):
+                
+                board.push(next_move[0])
+                score = self.get_board_score(board)
+                self.move_history.append(board)
+                self.evaluation_history.append(score)
+
+                encoded_state = self.model.encode(
+                    self.move_history,
+                    self.evaluation_history,
+                    self.get_additional_attributes())
+                
+                used_moves.append(next_move[0])
+                encoded_states.append(encoded_state)
+                scores.append(score)
+
+                self.evaluation_history.pop()
+                self.move_history.pop()
+                board.pop()
+        if not opponent_moves:
+            return None, self.get_board_score(board)
+        opponent_moves=np.array(opponent_moves).reshape(-1, 1)
+        np.apply_along_axis(do_move, -1, opponent_moves)
+     
+        
+        choice_probs = self.model.predict_batch(encoded_states)
+        prediction_vars = list(zip(used_moves, choice_probs, scores))
+        return self.aggregate(prediction_vars)
+
+
+    def induce_opponents_move_optimized(
+            self,
+            board: chess.Board,
+            depth: int=0,
+            **kwargs,
+        ) -> Tuple[chess.Move, float]:
+            
+        opponent_moves = list(board.legal_moves)
+        if not opponent_moves:
+            return None, self.get_board_score(board)
+
+        # Process moves in batches
+        BATCH_SIZE = 32
+        n_moves = len(opponent_moves)
+        scores = np.zeros(n_moves, dtype=np.float32)
+        encoded_states = []
+        
+        for i in range(0, n_moves, BATCH_SIZE):
+            batch_moves = opponent_moves[i:i + BATCH_SIZE]
+            batch_boards = []
+            
+            # Prepare boards for batch analysis
+            for move in batch_moves:
+                new_board = board.copy()
+                new_board.push(move)
+                batch_boards.append(new_board)
+                
+            # Batch analyze all positions
+            batch_scores = self.get_board_scores_batch(batch_boards)
+            
+            # Process results
+            for j, (b, score) in enumerate(zip(batch_boards, batch_scores)):
+                scores[i + j] = score
+                self.move_history.append(b)
+                self.evaluation_history.append(score)
+                
+                encoded_states.append(self.model.encode(
+                    self.move_history,
+                    self.evaluation_history,
+                    self.get_additional_attributes()))
+                    
+                self.evaluation_history.pop()
+                self.move_history.pop()
+        
+        # Batch predict all states at once
+        choice_probs = self.model.predict_batch(encoded_states)
+        prediction_vars = list(zip(opponent_moves, choice_probs, scores))
+        return self.aggregate(prediction_vars)
+    #
+
+    
 
     def induce_opponents_move(
             self,
@@ -804,7 +974,7 @@ class ChessBot(Player):
         used_moves = list()
         encoded_states = list()
         scores = list()
-
+        
         if not opponent_moves:
             return None, self.get_board_score(board)
 
@@ -826,7 +996,7 @@ class ChessBot(Player):
                 self.evaluation_history.pop()
                 self.move_history.pop()
                 board.pop()
-        
+       
         choice_probs = self.model.predict_batch(encoded_states)
         prediction_vars = list(zip(used_moves, choice_probs, scores))
         return self.aggregate(prediction_vars)
