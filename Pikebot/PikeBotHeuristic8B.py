@@ -10,6 +10,8 @@ class PikeBotHeuristic8B(Pikebot):
         super().__init__(model, aggregate, stockfish_path, color, time_limit, engine_depth, name, opponents_elo)
         self.max_depth = max_depth
         self.n_best_moves = n_best_moves
+        self.stockfish_moves = 0
+        self.non_stockfish_moves = 0
 
     def induce_own_move(
             self,
@@ -27,6 +29,7 @@ class PikeBotHeuristic8B(Pikebot):
         
         # best_move_scores = self.get_n_best_move_scores(board, self.n_best_moves, self.engine_depth-depth)
         best_move_scores = self.get_n_best_move_scores_time(board, self.n_best_moves, self.time_limit)
+        stockfish_move = max(best_move_scores, key=best_move_scores.get)
 
         best_score = -float('inf') 
         for move, score in best_move_scores.items():
@@ -48,6 +51,11 @@ class PikeBotHeuristic8B(Pikebot):
             self.move_history.pop()
             board.pop()
 
+        if stockfish_move == max(my_moves_scores, key=lambda x: x[1])[0]:
+            self.stockfish_moves += 1
+        else:
+            self.non_stockfish_moves += 1
+            
         return max(my_moves_scores, key=lambda x: x[1])
     
     def induce_opponents_move(
@@ -140,6 +148,9 @@ class PikeBotHeuristic8B(Pikebot):
             self.move_history.append(board.copy())
             # Revert score to our pov
             self.evaluation_history.append(-1*op_score)
+
+            prob = probabilities[i]
+            op_score = op_score * (1 - prob) if op_score < 0 else op_score * prob
             
             if depth <= self.max_depth:
                 _, induced_score = self.induce_own_move(board, depth+1, alpha=alpha, beta=beta)
