@@ -777,6 +777,33 @@ class ChessBot(Player):
             move_scores[move] = score
 
         return move_scores
+    
+    def get_n_best_move_scores_time(self, board: chess.Board, n: int, time_lim:float=0.1) -> Dict[chess.Move, int]:
+        """
+        Runs Stockfish evaluation for the top n moves in a given position. Using time limit.
+
+        Parameters:
+        - board (chess.Board): Current state of the chess board.
+        - n (int): Number of top moves to evaluate.
+        - time_lim (float): Time limit at which Stockfish should operate, if None set to 0.1.
+
+        Returns:
+        - move_scores (dict): Dictionary of the top n moves with corresponding scores.
+        """
+        # Ensure n does not exceed the number of legal moves
+        legal_moves_count = len(list(board.legal_moves))
+        n = min(n, legal_moves_count)
+
+        # Set MultiPV to n to get the top n moves
+        info = self.engine.analyse(board, chess.engine.Limit(time=time_lim), multipv=n)
+
+        move_scores = {}
+        for entry in info:
+            move = entry["pv"][0]  # Principal Variation (PV) move
+            score = entry["score"].pov(color=self.color).score(mate_score=900)  # Score from White's perspective
+            move_scores[move] = score
+
+        return move_scores
 
         
     

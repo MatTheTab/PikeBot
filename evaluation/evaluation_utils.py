@@ -1,6 +1,8 @@
 import chess
 import time
 
+from tqdm import tqdm
+
 import chess.engine
 import utils.chess_utils as chess_utils
 import matplotlib.pyplot as plt
@@ -31,7 +33,7 @@ def compare_engines(engine1:chess_utils.Player, engine2:chess_utils.Player, boar
     results = []
     games = []
 
-    for board, move_history in boards_dataset:
+    for board, move_history in tqdm(boards_dataset):
         # set move history and evaluation history
         for engine in [engine1, engine2]:
             if isinstance(engine, chess_utils.ChessBot):
