@@ -1,7 +1,7 @@
 {
     "attributes_to_standardize": {
         "stockfish_score_depth_8": [-135, 421],
-        "stockfish_difference_depth_8": [-172, 250]
+        "stockfish_difference_depth_8": [-172, -250]
     },
     "attributes_to_scale": {
         "elo": [0, 3000],
@@ -19,4 +19,5 @@
         "blitz",
         "rated"
     ]
+    
 }

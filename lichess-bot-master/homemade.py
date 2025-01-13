@@ -23,7 +23,8 @@ sys.path.append(parent_dir)
 
 from utils.chess_utils import ChessBot, Uniform_model, mean_aggr, max_aggr
 from utils.pikeBot_chess_utils import Pikebot, PikeBotModelWrapper
-from Pikebot.PikeBotHeuristic5 import PikeBotHeuristic5
+from Pikebot.PikeBotHeuristic8 import PikeBotHeuristic8
+from Pikebot.PikeBotHeuristic9 import PikeBotHeuristic9
 
 
 
@@ -48,29 +49,49 @@ class PikeBotEngine(ExampleEngine):
         self.opponent_elo = 1500
 
         if game:
-            if game.opponent_color == "white":
-                self.opponent_elo = game.white.rating
-            else:
-                self.opponent_elo = game.black.rating
-
-            with open('pikeBot-config.yaml') as config_file:
-                config = yaml.safe_load(config_file)
-
-                stockfish_path = config['stockfish_path']
-                model_path = config["model_path"]
-                preprocessing_parameters_path = config["preprocessing_parameters_path"]
-            
-            model = PikeBotModelWrapper(model_path, preprocessing_parameters_path)
-            self.chessBot = PikeBotHeuristic5(
-                model=model,
+            self.read_parameters(game)
+            self.chessBot = PikeBotHeuristic8(
+                model=self.model,
                 aggregate=max_aggr,
-                stockfish_path=stockfish_path,
+                stockfish_path=self.stockfish_path,
                 color=game.my_color,
                 opponents_elo = self.opponent_elo
             )
+
+    def read_parameters(self, game):
+        if game.opponent_color == "white":
+            self.opponent_elo = game.white.rating
+        else:
+            self.opponent_elo = game.black.rating
+
+        with open('pikeBot-config.yaml') as config_file:
+            config = yaml.safe_load(config_file)
+
+            self.stockfish_path = config['stockfish_path']
+            self.model_path = config["model_path"]
+            self.preprocessing_parameters_path = config["preprocessing_parameters_path"]
+        
+        self.model = PikeBotModelWrapper(self.model_path, self.preprocessing_parameters_path)
+
+    def send_game_result(self, game, board):
+        self.chessBot.close()
+        return super().send_game_result(game, board)
             
 
     def search(self, board: chess.Board, *args: Any) -> PlayResult:
-        print(args)
-        print(self.chessBot.move_history)
         return PlayResult(self.chessBot.get_best_move(board), None)
+
+class PikeBotEngine9(PikeBotEngine):
+    def __init__(self, commands, options, stderr, draw_or_resign, game = None, name = None, **popen_args):
+        super().__init__(commands, options, stderr, draw_or_resign, game, name, **popen_args)
+        self.opponent_elo = 1500
+
+        if game:
+            self.read_parameters(game)
+            self.chessBot = PikeBotHeuristic9(
+                model=self.model,
+                aggregate=max_aggr,
+                stockfish_path=self.stockfish_path,
+                color=game.my_color,
+                opponents_elo = self.opponent_elo
+            )
