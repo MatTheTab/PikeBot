@@ -137,7 +137,7 @@ challenge:                         # Incoming challenges.
   min_days: 1                      # Minimum number of days per move to accept a challenge for a correspondence game.
   variants:                        # Chess variants to accept (https://lichess.org/variant).
     - standard
-#   - fromPosition
+    - fromPosition
 #   - antichess
 #   - atomic
 #   - chess960
@@ -170,7 +170,7 @@ greeting:
   #   {opponent} to insert opponent's name
   #   {me} to insert bot's name
   # Any other words in curly braces will be removed.
-  hello: "Hi! I'm {me}. Good luck! Type !help for a list of commands I can respond to." # Message to send to opponent chat at the start of a game
+  hello: "Google en passant" # Message to send to opponent chat at the start of a game
   goodbye: "Good game!" # Message to send to opponent chat at the end of a game
   hello_spectators: "Hi! I'm {me}. Type !help for a list of commands I can respond to." # Message to send to spectator chat at the start of a game
   goodbye_spectators: "Thanks for watching!" # Message to send to spectator chat at the end of a game
